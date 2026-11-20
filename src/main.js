@@ -39,6 +39,28 @@ if (params.has('probe')) {
   }
   // ?first=<tuile> : premier essai forcé, Kong placé à cette tuile (captures)
   if (params.has('first')) { startFirstRun(game); game.fade = 0; game.scene.player.x = +params.get('first') * 16; }
+  // ?ecoute=w1 : écoute d'un morceau (clic pour démarrer, ←/→ pour l'intensité)
+  if (params.has('ecoute')) {
+    const id = params.get('ecoute');
+    let lvl = 0.3;
+    game.scene = {
+      update() {
+        const inp = game.input;
+        if (inp.pressed.jump || inp.pressed.confirm || inp.taps.length) game.music.play(id);
+        if (inp.pressed.right) lvl = Math.min(1, lvl + 0.1);
+        if (inp.pressed.left) lvl = Math.max(0, lvl - 0.1);
+        game.music.setIntensity(lvl);
+      },
+      render(ctx) {
+        const v = game.view;
+        ctx.fillStyle = '#0e1650'; ctx.fillRect(0, 0, v.w, v.h);
+        game.text(ctx, 'ECOUTE : ' + id.toUpperCase(), v.w / 2, 90, { align: 'center', scale: 2, color: '#ffc83d' });
+        game.text(ctx, game.music.current ? 'EN COURS' : 'CLIQUE OU ESPACE POUR LANCER', v.w / 2, 120, { align: 'center' });
+        game.text(ctx, `INTENSITE ${Math.round(lvl * 100)}%  (← / →)`, v.w / 2, 140, { align: 'center', color: '#7ee8ff' });
+      },
+    };
+    game.fade = 0;
+  }
   // ?card=1 : aperçu de l'image de partage (captures)
   if (params.has('card')) {
     import('./game/share.js').then((S) => { S.preloadShare(); setTimeout(() => { const c = S.drawCard(game, { head: '1-3 LA FORET', big: '0:42.18', lines: [['★★·   CHUTES : 2', '#ffffff'], ['3E DU CLASSEMENT', '#7ee8ff']], pseudo: 'ZUCCA' }); c.style.cssText = 'position:fixed;left:0;top:0;height:100vh;width:auto;z-index:99;background:#000'; document.body.appendChild(c); }, 800); });

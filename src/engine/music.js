@@ -8,10 +8,14 @@ export function midi(name) {
 }
 const freq = (m) => 440 * Math.pow(2, (m - 69) / 12);
 
+// Accords : C, Cm, C7, Cm7, Cmaj7 (les 3 premières notes servent à la basse et à l'arpège, la 4e colore les nappes et les stabs)
 function chord(name, oct) {
-  const m = /^([A-G])(#|b)?(m)?$/.exec(name);
+  const m = /^([A-G])(#|b)?(m)?(maj7|7)?$/.exec(name);
   const root = 12 * (oct + 1) + NOTE[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0);
-  return m[3] ? [root, root + 3, root + 7] : [root, root + 4, root + 7];
+  const tri = m[3] ? [root, root + 3, root + 7] : [root, root + 4, root + 7];
+  if (m[4] === '7') tri.push(root + 10);
+  if (m[4] === 'maj7') tri.push(root + 11);
+  return tri;
 }
 
 /*
@@ -21,10 +25,20 @@ function chord(name, oct) {
   bass  : motif sur 16 pas — R = fondamentale, 3 = tierce, 5 = quinte, 8 = octave, '.' = silence,
   arp   : indices des notes de l'accord (0..5), '.' = silence,
   lead  : une chaîne par mesure, 16 jetons : note (C5, F#4, Bb3), '.' silence, '-' tenue,
+  stab  : accords plaqués « filter house » sur 16 pas ('x'), filtre qui s'ouvre avec l'intensité (cut: [fermé, ouvert] en Hz),
+  drums.open : charleston ouverte (contretemps disco),
+  file  : morceau enregistré (MP3) joué en boucle à la place du séquenceur (gain : volume relatif),
   layers: seuil d'intensité (0..1) à partir duquel chaque couche est audible.
+
+ ADN commun de la bande-son (calé sur le morceau d'accueil : sol, ~109 BPM, disco / French house) :
+  - tonalités autour de sol (G, Em, C, D) avec la couleur funky si bémol / fa ;
+  - grosse caisse sur chaque temps, clap sur 2 et 4, charleston ouverte en contretemps, basse disco en octaves ;
+  - leitmotiv tiré de la mélodie d'accueil : A . C . E - - . G . B . C - A . (transposé et transformé selon le monde).
 */
 export const TRACKS = {
-  title: {
+  title: { file: './music/accueil.mp3', gain: 0.32, layers: {} },
+  // ancien thème synthétisé de l'écran titre (conservé pour l'hors-ligne sans le fichier)
+  titleSynth: {
     bpm: 112, chords: ['F', 'G', 'Em', 'Am', 'F', 'G', 'C', 'C'],
     drums: { kick: 'x.......x.x.....', snare: '....x.......x...', hat: '..x...x...x...x.', hat16: 'x.x.x.x.x.x.x.x.' },
     bass: { pattern: 'R...R.5.R...8.5.', oct: 2, type: 'triangle' },
@@ -37,18 +51,22 @@ export const TRACKS = {
       'E6 - - - D6 - C6 - G5 - - - E5 - G5 -', 'C6 - - - - - - - - - - - . . . .'] },
     layers: { pad: 0, bass: 0, lead: 0, drums: 0.2, arp: 0.5, hat16: 0.75 },
   },
-  w1: {
-    bpm: 132, chords: ['C', 'G', 'Am', 'F', 'C', 'G', 'F', 'G'],
-    drums: { kick: 'x.......x.......', snare: '....x.......x...', hat: '..x...x...x...x.', hat16: '.x.x.x.x.x.x.xxx' },
-    bass: { pattern: 'R.R.5.R.R.R.5.8.', oct: 2, type: 'triangle' },
-    arp: { pattern: '0120120120120121', oct: 5, type: 'square' },
+  // Monde 1 - L'aube sur la station : morceau enregistré (même artiste que l'accueil, mi mineur)
+  w1: { file: './music/monde1.mp3', gain: 0.32, layers: {} },
+  // ancienne version synthétisée du monde 1 (disco), conservée pour essais
+  w1Synth: {
+    bpm: 116, chords: ['Gmaj7', 'C', 'Gmaj7', 'C', 'Em7', 'C', 'A7', 'D'],
+    drums: { kick: 'x...x...x...x...', snare: '....x.......x...', clap: true, hat: '', open: '..x...x...x...x.', hat16: 'x.xxx.xxx.xxx.xx' },
+    bass: { pattern: 'R..8..R.R..8.5.8', oct: 2, type: 'triangle' },
+    stab: { pattern: '...x..x....x..x.', oct: 4, cut: [700, 3200] },
+    arp: { pattern: '0.1.2.3.4.3.2.1.', oct: 5, type: 'bell' },
     pad: { oct: 4 },
     lead: { type: 'square', notes: [
-      'E5 . G5 . C6 - B5 . A5 . G5 . E5 - - .', 'D5 . G5 . B5 - A5 . G5 . D5 . B4 - - .',
-      'C5 . E5 . A5 - G5 . E5 . A5 . C6 - - .', 'A5 - G5 - F5 . E5 . F5 . A5 . C6 - - -',
-      'E5 . E5 . G5 . C6 . E6 - D6 . C6 . G5 .', 'D6 - B5 . G5 . B5 . D6 - C6 . B5 . A5 .',
-      'A5 . C6 . F6 - E6 . D6 . C6 . A5 . C6 .', 'B5 - - . D6 - - . G6 - - - - - . .'] },
-    layers: { pad: 0, bass: 0, drums: 0, lead: 0.15, arp: 0.55, hat16: 0.75 },
+      'A5 . C6 . E6 - - . G5 . B5 . C6 - A5 .', 'G5 - - - E5 . G5 . C6 - - - . . . .',
+      'A5 . C6 . E6 - - . G6 . E6 . D6 - B5 .', 'C6 - - - - - . . E5 . G5 . A5 . C6 .',
+      'B5 . B5 . E6 - D6 . B5 - - - G5 . A5 .', 'C6 - - - E6 - - - G6 - - - E6 . C6 .',
+      'A5 . C#6 . E6 - - . G6 . E6 . C#6 - A5 .', 'D6 - - - - - - - F#5 . A5 . D6 . F#6 .'] },
+    layers: { pad: 0, bass: 0, drums: 0, stab: 0.1, lead: 0.2, arp: 0.5, hat16: 0.7 },
   },
   w2: {
     bpm: 100, chords: ['Am', 'F', 'C', 'G', 'Am', 'F', 'E', 'E'],
@@ -109,7 +127,7 @@ const JINGLES = {
   unlock: { bpm: 200, type: 'square', notes: 'C6 E6 G6 C7 - - - -', bass: '' },
 };
 
-const LAYER_NAMES = ['drums', 'hat16', 'bass', 'pad', 'arp', 'lead'];
+const LAYER_NAMES = ['drums', 'hat16', 'bass', 'pad', 'stab', 'arp', 'lead'];
 
 export class Music {
   constructor(engine) {
@@ -143,6 +161,7 @@ export class Music {
     filter.type = 'lowpass';
     filter.frequency.value = 18000;
     group.connect(filter).connect(this.e.musicBus);
+    if (tr.file) { this.current = this.startFile(id, tr, group, filter); return; }
     const layers = {};
     for (const n of LAYER_NAMES) {
       const g = ctx.createGain();
@@ -150,7 +169,37 @@ export class Music {
       g.connect(group);
       layers[n] = g;
     }
-    this.current = { id, tr, group, filter, layers, step: 0, next: ctx.currentTime + 0.08 };
+    // stabs « filter house » : un filtre commun qui s'ouvre avec l'intensité
+    let stabBus = null;
+    if (tr.stab) {
+      stabBus = ctx.createBiquadFilter();
+      stabBus.type = 'lowpass'; stabBus.Q.value = 6;
+      stabBus.frequency.value = this.stabCut(tr);
+      stabBus.connect(layers.stab);
+    }
+    this.current = { id, tr, group, filter, layers, stabBus, step: 0, next: ctx.currentTime + 0.08 };
+  }
+
+  stabCut(tr) { const [a, b] = tr.stab.cut || [600, 3000]; return a * Math.pow(b / a, this.intensity); }
+
+  /** Morceau enregistré : un seul élément <audio> réutilisé, branché dans le bus musique (volume, étouffement en pause). */
+  startFile(id, tr, group, filter) {
+    const ctx = this.ctx;
+    if (!this.audioEl) {
+      this.audioEl = new Audio();
+      this.audioEl.loop = true;
+      this.audioEl.preload = 'auto';
+      this.mediaSrc = ctx.createMediaElementSource(this.audioEl);
+    }
+    const el = this.audioEl;
+    // nouveau morceau : on repart du début (un même morceau qui revient reprend là où il était)
+    if (!el.src.endsWith(tr.file.replace('./', '/'))) { el.src = tr.file; el.currentTime = 0; el.play().catch(() => {}); }
+    try { this.mediaSrc.disconnect(); } catch (_) { /* pas encore branché */ }
+    const g = ctx.createGain();
+    g.gain.value = tr.gain ?? 0.4;
+    this.mediaSrc.connect(g).connect(group);
+    if (el.paused) { el.currentTime = 0; el.play().catch(() => {}); }
+    return { id, tr, group, filter, layers: {}, file: true };
   }
 
   fadeOutGroup(cur, fade) {
@@ -158,7 +207,10 @@ export class Music {
     cur.group.gain.cancelScheduledValues(t);
     cur.group.gain.setValueAtTime(cur.group.gain.value || 0.5, t);
     cur.group.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(0.05, fade));
-    setTimeout(() => { try { cur.group.disconnect(); } catch (_) { /* déjà détaché */ } }, fade * 1000 + 200);
+    setTimeout(() => {
+      try { cur.group.disconnect(); } catch (_) { /* déjà détaché */ }
+      if (cur.file && !(this.current && this.current.file) && this.audioEl) this.audioEl.pause();
+    }, fade * 1000 + 200);
   }
 
   stop(fade = 0.5) {
@@ -175,9 +227,11 @@ export class Music {
     if (!cur || !this.ctx) return;
     const t = this.ctx.currentTime;
     for (const n of LAYER_NAMES) {
+      if (!cur.layers[n]) continue;
       const on = (cur.tr.layers[n] ?? 0) <= this.intensity + 1e-6;
       cur.layers[n].gain.setTargetAtTime(on ? 1 : 0, t, 0.4);
     }
+    if (cur.stabBus) cur.stabBus.frequency.setTargetAtTime(this.stabCut(cur.tr), t, 0.6);
   }
 
   /** Assourdit la musique (pause, menus). */
@@ -222,7 +276,7 @@ export class Music {
     if (!ctx) return;
     if (this.pending) this.start(this.pending, 0.8);
     const cur = this.current;
-    if (!cur) return;
+    if (!cur || cur.file) return;
     const stepDur = 60 / cur.tr.bpm / 4;
     if (cur.next < ctx.currentTime - 0.5) cur.next = ctx.currentTime + 0.05;
     while (cur.next < ctx.currentTime + 0.15) {
@@ -243,7 +297,8 @@ export class Music {
     const d = tr.drums;
     if (d.kick[s] === 'x' || d.kick[s] === 'o') this.kick(t, L.drums);
     if (d.snare[s] === 'x') d.clap ? this.clap(t, L.drums) : this.snare(t, L.drums);
-    if (d.hat[s] === 'x') this.hat(t, L.drums, 0.05, d.clap ? 0.09 : 0.035);
+    if (d.hat && d.hat[s] === 'x') this.hat(t, L.drums, 0.05, d.clap ? 0.09 : 0.035);
+    if (d.open && d.open[s] === 'x') this.hat(t, L.drums, 0.06, 0.16);
     if (d.hat16 && d.hat16[s] === 'x') this.hat(t, L.hat16, 0.03, 0.025);
 
     const bc = tr.bass.pattern[s];
@@ -256,10 +311,14 @@ export class Music {
       const notes = chord(tr.chords[bar], tr.pad.oct);
       for (const n of notes) this.pad(n, t, sd * 16, L.pad);
     }
+    if (tr.stab && tr.stab.pattern[s] === 'x') {
+      const notes = chord(tr.chords[bar], tr.stab.oct);
+      this.stab(notes, t, sd * 1.6, cur.stabBus);
+    }
     const ac = tr.arp.pattern[s];
     if (ac && ac !== '.') {
       const tones = chord(tr.chords[bar], tr.arp.oct);
-      const all = [...tones, tones[0] + 12, tones[1] + 12, tones[2] + 12];
+      const all = tones.length > 3 ? [...tones, tones[0] + 12, tones[1] + 12] : [...tones, tones[0] + 12, tones[1] + 12, tones[2] + 12];
       this.voice(tr.arp.type, all[+ac] ?? tones[0], t, sd * 0.9, tr.arp.type === 'bell' ? 0.07 : 0.045, L.arp);
     }
     const line = tr.lead.notes[bar];
@@ -332,6 +391,23 @@ export class Music {
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(0.022, t + 0.25);
     g.gain.setValueAtTime(0.022, t + dur - 0.2);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.05);
+  }
+
+  /** Accord plaqué court (scies désaccordées), passé dans le filtre « filter house » du morceau. */
+  stab(notes, t, dur, out) {
+    const ctx = this.ctx;
+    const g = ctx.createGain();
+    g.connect(out);
+    for (const m of notes) for (const det of [-9, 9]) {
+      const o = ctx.createOscillator();
+      o.type = 'sawtooth'; o.frequency.value = freq(m); o.detune.value = det;
+      o.connect(g); o.start(t); o.stop(t + dur + 0.08);
+    }
+    const v = 0.05 / Math.sqrt(notes.length);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(v, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(v * 0.35, t + dur * 0.6);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.05);
   }
 
