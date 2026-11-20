@@ -1,0 +1,6 @@
+# Netlify (si tu choisis Netlify plutôt que Cloudflare Pages)
+[build]
+  command = "npm run build"
+  publish = "dist"
+[build.environment]
+  NODE_VERSION = "22"

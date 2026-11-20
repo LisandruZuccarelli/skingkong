@@ -1,0 +1,10 @@
+{
+  "name": "SkingKong - ESTP Cachan Liste ski 2027",
+  "short_name": "SkingKong",
+  "start_url": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0a0d24",
+  "theme_color": "#0a0d24",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

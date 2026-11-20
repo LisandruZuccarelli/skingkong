@@ -1,0 +1,17 @@
+{
+  "name": "skingkong",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "SkingKong - le jeu officiel de la liste ski 2027 ESTP Cachan",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host",
+    "test": "node tests/run.mjs",
+    "sql": "node tools/online/gen_sql.mjs"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}

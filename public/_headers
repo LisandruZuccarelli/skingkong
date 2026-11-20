@@ -1,0 +1,16 @@
+# En-têtes HTTP (Cloudflare Pages et Netlify lisent ce fichier)
+# Fichiers du build : noms hachés, donc jamais modifiés -> cache long
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Page et service worker : toujours revérifiés, pour que les mises à jour arrivent tout de suite
+/
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+/sw.js
+  Cache-Control: no-cache
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
