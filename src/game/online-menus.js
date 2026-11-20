@@ -60,7 +60,6 @@ export class AccountScene extends MenuScene {
         { name: 'email', label: 'Adresse e-mail', type: 'email', max: 120, auto: 'email' },
         { name: 'password', label: 'Mot de passe (8 caracteres minimum)', type: 'password', max: 72, auto: 'new-password' },
         { name: 'promo', label: 'Ta promo (classement des promos)', type: 'select', options: [{ value: '', label: 'Je ne dis pas' }, ...PROMOS.map((p) => ({ value: p.id, label: p.id === 'EXT' ? 'Exterieur a l\'ESTP' : p.id === 'ALUMNI' ? 'Ancien eleve' : p.id })) ] },
-        { name: 'estp', label: 'Je fais partie de la liste ESTP Cachan', type: 'checkbox' },
       ],
       submit: 'Creer',
       note: o.online
@@ -102,7 +101,6 @@ export class AccountScene extends MenuScene {
       { label: 'MON PROFIL ET MES AMIS', act: () => g.gotoProfile() },
       { label: 'CLASSEMENTS', act: () => g.gotoLeaderboard() },
       { label: `MA PROMO : ${u.promo || 'AUCUNE'}`, act: () => this.nextPromo() },
-      { label: `LISTE ESTP CACHAN : ${u.estp ? 'OUI' : 'NON'}`, act: () => this.run(o.updateProfile({ estp: !u.estp }).then(() => (o.user.estp ? 'TU APPARAIS AU CLASSEMENT DE LA LISTE' : 'RETIRE DU CLASSEMENT DE LA LISTE'))) },
       { label: 'SE DECONNECTER', act: () => this.run(o.signOut().then(() => 'DECONNECTE : TA PARTIE RESTE SUR CET APPAREIL')), color: '#ff8a9a' },
     ];
   }
