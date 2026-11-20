@@ -13,7 +13,8 @@ import { Darkness, drawGlow } from '../engine/lights.js';
 import { Zipline, Chairlift, Avalanche, WindField, updateZip, ZIP } from './mechanics.js';
 import { Particles } from '../engine/particles.js';
 import { Camera } from '../engine/camera.js';
-import { clamp, damp, aabb } from '../engine/util.js';
+import { clamp, damp, aabb, formatTime } from '../engine/util.js';
+import { shareCard, preloadShare } from './share.js';
 import { drawHUD, drawTouchControls, drawPause, pauseLayout, drawResults, drawBanners, drawSignBubble, drawDebug, touchLayout, drawDeath } from './hud.js';
 
 const SNOW = ['#ffffff', '#eef6ff', '#cfe0ff'];
@@ -110,6 +111,7 @@ export class LevelScene {
     this.assisted = this.assistSpeed < 1 || this.shield;
     this.shieldT = 0;
     if (this.mode && this.mode.setup) this.mode.setup(this);
+    preloadShare();
     // Boss : arène fixe (caméra bloquée), combat qui démarre dès l'entrée
     this.boss = data.boss ? createBoss(data.boss, this) : null;
     if (this.boss) {
@@ -511,6 +513,29 @@ export class LevelScene {
     this.game.persist();
   }
 
+  /** Partage du résultat (image avec le QR code du jeu). */
+  canShare() { return !!this.results && !(this.mode && this.mode.noShare) && typeof document !== 'undefined'; }
+  shareCardData() {
+    const r = this.results, u = this.game.online && this.game.online.user;
+    const pseudo = u ? u.pseudo : null;
+    if (r.custom) {
+      const lines = (r.lines || []).filter(([t]) => t);
+      const big = lines.length ? lines[0][0] : formatTime(this.time);
+      return { head: r.title || this.label, big, lines: lines.slice(1, 4).map(([t, c]) => [t, c && c !== '#ffffff' ? c : '#ffffff']), pseudo };
+    }
+    const lines = [[`${'★'.repeat(r.rating)}${'·'.repeat(3 - r.rating)}   CHUTES : ${r.deaths}`, '#ffffff']];
+    if (r.online && r.online.rank) lines.push([`${r.online.rank}${r.online.rank === 1 ? 'ER' : 'E'} DU CLASSEMENT`, '#7ee8ff']);
+    if (r.newRecord && r.prevTime !== null) lines.push(['NOUVEAU RECORD !', '#ffc83d']);
+    return { head: `${this.label} ${this.data.name.toUpperCase()}`, big: formatTime(r.time), lines, pseudo };
+  }
+  share() {
+    if (this.sharing) return;
+    this.sharing = true; this.shareMsg = 'PREPARATION...';
+    shareCard(this.game, this.shareCardData())
+      .then((msg) => { this.shareMsg = msg; }, () => { this.shareMsg = 'PARTAGE IMPOSSIBLE'; })
+      .finally(() => { this.sharing = false; setTimeout(() => { this.shareMsg = null; }, 2500); });
+  }
+
   restart() {
     const mode = this.mode && this.mode.restart ? this.mode.restart(this) : this.mode;
     if (mode === false) return;
@@ -578,6 +603,8 @@ export class LevelScene {
         const rt = this.stateT - 1.4;
         const shouldShow = Math.min(this.results.rating, Math.floor((rt - 0.5) / 0.35) + 1);
         if (shouldShow > this.ratingShown && rt > 0.5) { this.ratingShown = shouldShow; g.audio.play('rate', 1 + this.ratingShown * 0.12); }
+        const sb = this.shareBtn;
+        if (rt > 0.6 && this.canShare() && (inp.pressed.share || (sb && inp.tapIn(sb.x, sb.y, sb.w, sb.h)))) { g.audio.play('select'); this.share(); return; }
         if (rt > 0.6 && (inp.pressed.jump || inp.pressed.confirm || inp.taps.length)) { g.audio.play('select'); if (this.mode && this.mode.next) this.mode.next(this); else g.nextLevel(this.data.id); return; }
         if (rt > 0.6 && inp.pressed.restart) { g.audio.play('select'); this.restart(); return; }
         if (inp.pressed.pause) { g.audio.play('select'); this.exitLevel(); return; }
@@ -1022,7 +1049,7 @@ export class LevelScene {
       ctx.fillRect(0, 0, v.w, v.h);
       ctx.globalAlpha = 1;
     }
-    if (this.state !== 'won' || this.stateT < 1.4) { drawHUD(ctx, this, v); if (this.mode && this.mode.hud) this.mode.hud(ctx, this, v); }
+    if (this.state !== 'won' || this.stateT < 1.4) { if (!(this.mode && this.mode.hideHud)) drawHUD(ctx, this, v); if (this.mode && this.mode.hud) this.mode.hud(ctx, this, v); }
     drawBanners(ctx, this, v);
     if (p.dead && this.deathPhrase) drawDeath(ctx, this, v);
     if (g.input.touchMode && this.state === 'play') {

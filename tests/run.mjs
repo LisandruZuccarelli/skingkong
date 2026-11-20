@@ -452,7 +452,7 @@ console.log('Boutique, succès, défis');
 
 console.log('Comptes, sauvegarde cloud, classements');
 {
-  const { levelLimits, checkRun, checkPseudo, featuredLevel, rankBoard } = await import('../src/online/rules.js');
+  const { levelLimits, checkRun, checkPseudo, featuredLevel, rankBoard, rankPromos } = await import('../src/online/rules.js');
   const { mergeSaves, cloudPayload } = await import('../src/online/merge.js');
   const { LocalBackend, memoryStorage, hashPassword } = await import('../src/online/local.js');
   const { SupabaseBackend } = await import('../src/online/supabase.js');
@@ -565,6 +565,19 @@ console.log('Comptes, sauvegarde cloud, classements');
   await on.addFriend('yetix');
   fr = await on.board({ scope: 'level', level: '1-1', filter: 'friends' });
   ok(fr.rows.map((r) => r.pseudo).join() === 'Yetix,Skieuse' && (await on.friends()).length === 1, 'ami ajouté par pseudo, il apparaît dans le classement amis');
+  // promos : Skieuse (connectée) et Yetix en 2A, KongMaster en 1A
+  await on.updateProfile({ promo: '2A' });
+  ok(on.user.promo === '2A', 'promo choisie depuis le compte');
+  let pe = await on.updateProfile({ promo: 'ZZ' }).then(() => on.user.promo);
+  ok(pe === null, 'promo inconnue refusée (aucune promo)');
+  await on.updateProfile({ promo: '2A' });
+  await on.signIn({ login: 'y@x.fr', password: 'motdepasse' }); await on.updateProfile({ promo: '2A' });
+  await on.signIn({ login: 'kong@exemple.fr', password: 'motdepasse1' }); await on.updateProfile({ promo: '1A' });
+  await on.signIn({ login: 's@k.fr', password: 'motdepasse' });
+  const mp = await on.board({ scope: 'level', level: '1-1', filter: 'promo' });
+  ok(mp.rows.map((r) => r.pseudo).join() === 'Yetix,Skieuse' && mp.rows.every((r) => r.promo === '2A'), 'classement MA PROMO : seulement les joueurs de sa promo');
+  const pb = await on.board({ scope: 'promos' });
+  ok(pb.rows.map((r) => `${r.promo}:${r.levels}:${r.players}`).join() === '2A:3:2,1A:1:1' && pb.rows[0].me, 'bataille des promos : 1 point par niveau terminé, sa promo repérée');
   let fe = ''; try { await on.addFriend('Skieuse'); } catch (e) { fe = e.message; }
   ok(/toi/.test(fe), 'impossible de s\'ajouter soi-même');
   const daily = on.dailyLevel();

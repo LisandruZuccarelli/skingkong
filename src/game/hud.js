@@ -185,6 +185,7 @@ export function drawResults(ctx, lvl, v) {
     for (const [txt, col, sc] of r.lines || []) { drawText(ctx, txt, v.w / 2, yy, { align: 'center', color: col || '#ffffff', scale: sc || 1 }); yy += lineH(sc); }
     if (r.online) drawText(ctx, r.online.msg, v.w / 2, yy + 2, { align: 'center', color: '#7ee8ff' });
     if (t > 0.6 && Math.sin(lvl.game.time * 6) > -0.3) drawText(ctx, cprompt, v.w / 2, y + h - 16, { align: 'center', color: '#ffffff' });
+    drawShareButton(ctx, lvl, v, y + h + 5);
     ctx.globalAlpha = 1;
     return;
   }
@@ -218,7 +219,20 @@ export function drawResults(ctx, lvl, v) {
     const blink = Math.sin(lvl.game.time * 6) > -0.3;
     if (blink) drawText(ctx, prompt, v.w / 2, y + h - 18, { align: 'center', color: '#ffffff' });
   }
+  drawShareButton(ctx, lvl, v, y + h + 5);
   ctx.globalAlpha = 1;
+}
+
+/** Bouton « partager mon score » sous le cadre des résultats (la zone sert aussi au tactile). */
+function drawShareButton(ctx, lvl, v, y) {
+  if (!lvl.canShare()) { lvl.shareBtn = null; return; }
+  const touch = lvl.game.input.touchMode;
+  const label = lvl.shareMsg || (touch ? 'PARTAGER MON SCORE' : 'X : PARTAGER MON SCORE');
+  const w = measure(label) + 20, h = 15;
+  const by = Math.min(y, v.h - h - 3), x = v.w / 2 - w / 2;
+  lvl.shareBtn = { x, y: by, w, h };
+  panel(ctx, x, by, w, h, 'rgba(255,200,61,0.92)', '#0a0d24');
+  drawText(ctx, label, v.w / 2, by + 4, { align: 'center', color: '#0a0d24', shadow: null });
 }
 
 /** Écran de chute : phrase « brainrot » (le SKI en couleurs) ; contre un boss, invite à relancer le combat. */

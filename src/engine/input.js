@@ -10,6 +10,7 @@ export const DEFAULT_BINDINGS = {
   debug: ['F3', 'Backquote'],
   confirm: ['Enter', 'Space', 'NumpadEnter'],
   fullscreen: ['KeyF'],
+  share: ['KeyX'],
 };
 const ACTIONS = Object.keys(DEFAULT_BINDINGS);
 const BLOCK = new Set(['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'F3', 'Backquote']);

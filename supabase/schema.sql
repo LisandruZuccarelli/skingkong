@@ -1,5 +1,6 @@
 -- SkingKong : schéma Supabase (étape 6). À exécuter une fois dans Supabase > SQL Editor,
--- puis exécuter supabase/levels.sql (limites anti-triche des niveaux, généré par `npm run sql`).
+-- puis exécuter supabase/levels.sql (limites anti-triche des niveaux, généré par `npm run sql`)
+-- et supabase/promos.sql (classement par promo).
 -- Sécurité :
 --  * les mots de passe sont gérés par Supabase Auth (hachage bcrypt côté serveur) ; l'e-mail reste dans auth.users, jamais exposé ;
 --  * Row Level Security partout : chacun ne lit / n'écrit que sa sauvegarde et sa liste d'amis ;

@@ -1,7 +1,7 @@
 // Client Supabase minimal (fetch, sans dépendance) : authentification, profil, sauvegarde cloud, classements, amis.
 // Le mot de passe part en HTTPS vers Supabase Auth, qui le hache (bcrypt) côté serveur ; le jeu ne le garde jamais.
 // Toutes les vérifications importantes (temps plausibles, limitation de débit) sont refaites côté serveur (supabase/schema.sql).
-import { checkPseudo, checkPassword, checkEmail, checkRun } from './rules.js';
+import { checkPseudo, checkPassword, checkEmail, checkRun, isPromo } from './rules.js';
 
 const MSG = {
   'Invalid login credentials': 'identifiants incorrects',
@@ -53,20 +53,20 @@ export class SupabaseBackend {
     const s = { access_token: d.access_token, refresh_token: d.refresh_token, expires_at: d.expires_at || Math.floor(Date.now() / 1000) + (d.expires_in || 3600), user: known };
     this.setSession(s);
     if (!known) {
-      const p = await this.http(`/rest/v1/profiles?id=eq.${d.user.id}&select=id,pseudo,estp,skin`);
-      s.user = p[0] ? { id: p[0].id, pseudo: p[0].pseudo, estp: p[0].estp, skin: p[0].skin } : { id: d.user.id, pseudo: '?', estp: false, skin: 'classic' };
+      const p = await this.http(`/rest/v1/profiles?id=eq.${d.user.id}&select=id,pseudo,estp,skin,promo`);
+      s.user = p[0] ? { id: p[0].id, pseudo: p[0].pseudo, estp: p[0].estp, skin: p[0].skin, promo: p[0].promo || null } : { id: d.user.id, pseudo: '?', estp: false, skin: 'classic', promo: null };
       this.setSession(s);
     }
     return s.user;
   }
 
-  async signUp({ pseudo, email, password, estp }) {
+  async signUp({ pseudo, email, password, estp, promo }) {
     const err = checkPseudo(pseudo) || checkEmail(email) || checkPassword(password);
     if (err) throw new Error(err);
     const free = await this.http('/rest/v1/rpc/pseudo_available', { method: 'POST', body: { p_pseudo: pseudo.trim() }, auth: false });
     if (!free) throw new Error(MSG.pseudo_taken);
     let d;
-    try { d = await this.http('/auth/v1/signup', { method: 'POST', auth: false, body: { email: email.trim(), password, data: { pseudo: pseudo.trim(), estp: !!estp } } }); }
+    try { d = await this.http('/auth/v1/signup', { method: 'POST', auth: false, body: { email: email.trim(), password, data: { pseudo: pseudo.trim(), estp: !!estp, promo: isPromo(promo) ? promo : null } } }); }
     catch (e) { throw new Error(/database error/i.test(e.message) ? MSG.pseudo_taken : e.message); }
     if (!d.access_token) throw new Error('compte cree ! confirme ton adresse (lien recu par e-mail) puis connecte-toi');
     return this.adopt(d);
@@ -85,6 +85,7 @@ export class SupabaseBackend {
     const body = {};
     if ('skin' in patch) body.skin = patch.skin;
     if ('estp' in patch) body.estp = !!patch.estp;
+    if ('promo' in patch) body.promo = isPromo(patch.promo) ? patch.promo : null;
     await this.http(`/rest/v1/profiles?id=eq.${this.user.id}`, { method: 'PATCH', body, headers: { Prefer: 'return=minimal' } });
     this.setSession({ ...this.session, user: { ...this.user, ...body } });
   }
@@ -107,8 +108,13 @@ export class SupabaseBackend {
     return { rank: r && r.rank, of: r && r.total };
   }
   async board({ scope, filter = 'all', level = null, limit = 50 }) {
+    if (scope === 'promos') {
+      const rows = await this.http('/rest/v1/rpc/promo_board', { method: 'POST', auth: !!this.user, body: {} });
+      const list = rows.map((r) => ({ rank: r.rank, promo: r.promo, players: r.players, levels: r.levels, me: r.is_mine }));
+      return { rows: list, me: list.find((r) => r.me) || null, total: list.length };
+    }
     const rows = await this.http('/rest/v1/rpc/leaderboard', { method: 'POST', auth: !!this.user, body: { p_scope: scope, p_filter: filter, p_level: level, p_limit: limit } });
-    const list = rows.map((r) => ({ rank: r.rank, user: r.user_id, pseudo: r.pseudo, skin: r.skin, estp: r.estp, time: r.total_time, levels: r.levels, me: r.is_me }));
+    const list = rows.map((r) => ({ rank: r.rank, user: r.user_id, pseudo: r.pseudo, skin: r.skin, estp: r.estp, promo: r.promo || null, time: r.total_time, levels: r.levels, me: r.is_me }));
     const me = list.find((r) => r.me) || null;
     return { rows: list.filter((r) => r.rank <= limit), me, total: rows.length ? rows[0].total : 0 };
   }

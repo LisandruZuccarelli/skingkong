@@ -1,4 +1,5 @@
 import { Game } from './game/game.js';
+import { needsFirstRun, startFirstRun } from './modes/firstrun.js';
 
 const canvas = document.getElementById('game');
 const game = new Game(canvas);
@@ -31,6 +32,16 @@ if (params.has('probe')) {
       for (const L of LEVELS) { if (L.id === params.get('upto')) break; game.save.best[L.id] = { time: 40, rating: 2, coins: 10, stars: [true, false, true] }; }
       game.save.lastLevel = params.get('upto');
     });
+  }
+  // toute première visite (sans paramètre de capture) : on joue tout de suite, menu ensuite
+  if (![...params.keys()].length) {
+    if (needsFirstRun(game.save)) { startFirstRun(game); game.fade = 0; }
+  }
+  // ?first=<tuile> : premier essai forcé, Kong placé à cette tuile (captures)
+  if (params.has('first')) { startFirstRun(game); game.fade = 0; game.scene.player.x = +params.get('first') * 16; }
+  // ?card=1 : aperçu de l'image de partage (captures)
+  if (params.has('card')) {
+    import('./game/share.js').then((S) => { S.preloadShare(); setTimeout(() => { const c = S.drawCard(game, { head: '1-3 LA FORET', big: '0:42.18', lines: [['★★·   CHUTES : 2', '#ffffff'], ['3E DU CLASSEMENT', '#7ee8ff']], pseudo: 'ZUCCA' }); c.style.cssText = 'position:fixed;left:0;top:0;height:100vh;width:auto;z-index:99;background:#000'; document.body.appendChild(c); }, 800); });
   }
   const run = () => {
     for (let i = 0; i < warm * 60; i++) {

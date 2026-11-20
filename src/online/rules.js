@@ -64,29 +64,58 @@ export const SCOPES = [
   { id: 'level', name: 'PAR NIVEAU' },
   { id: 'daily', name: 'DU JOUR' },
   { id: 'weekly', name: 'SEMAINE' },
+  { id: 'promos', name: 'PROMOS' },
 ];
 export const FILTERS = [
   { id: 'all', name: 'TOUS' },
   { id: 'friends', name: 'AMIS' },
   { id: 'estp', name: 'LISTE ESTP CACHAN' },
+  { id: 'promo', name: 'MA PROMO' },
 ];
+
+/** Promos (déclarées par le joueur ; même liste que la contrainte SQL de profiles.promo). */
+export const PROMOS = [
+  { id: '1A', name: '1RE ANNEE' }, { id: '2A', name: '2E ANNEE' }, { id: '3A', name: '3E ANNEE' },
+  { id: '4A', name: '4E ANNEE' }, { id: '5A', name: '5E ANNEE' }, { id: 'ALUMNI', name: 'ANCIENS' }, { id: 'EXT', name: 'EXTERIEUR' },
+];
+export const isPromo = (p) => PROMOS.some((x) => x.id === p);
+export const promoName = (p) => (PROMOS.find((x) => x.id === p) || { name: 'AUCUNE' }).name;
+
+/**
+ * Bataille des promos : chaque niveau terminé par un membre rapporte un point à sa promo
+ * (niveau du jour exclu). Égalité : le plus de joueurs.
+ */
+export function rankPromos(rows, myPromo = null) {
+  const by = new Map();
+  for (const r of rows) {
+    if (!isPromo(r.promo) || r.level === 'DAY') continue;
+    const p = by.get(r.promo) || { promo: r.promo, users: new Set(), done: new Set() };
+    p.users.add(r.user); p.done.add(r.user + '|' + r.level);
+    by.set(r.promo, p);
+  }
+  const list = [...by.values()].map((p) => ({ promo: p.promo, players: p.users.size, levels: p.done.size }))
+    .sort((a, b) => b.levels - a.levels || b.players - a.players || a.promo.localeCompare(b.promo));
+  list.forEach((r, i) => { r.rank = i + 1; r.me = r.promo === myPromo; });
+  return list;
+}
 
 /**
  * Classe des lignes de scores. rows : { user, pseudo, level, time, day, week, estp, skin }.
  * Global : niveaux terminés (desc) puis somme des meilleurs temps (asc). Les autres : meilleur temps.
  * Calcul utilisé par le mode local ; le serveur fait l'équivalent en SQL.
  */
-export function rankBoard(rows, { scope, level, day, week, filter, me, friends = [] }) {
+export function rankBoard(rows, { scope, level, day, week, filter, me, friends = [], promo = null }) {
   let rs = rows;
   if (filter === 'friends') { const ok = new Set([...friends, me]); rs = rs.filter((r) => ok.has(r.user)); }
   if (filter === 'estp') rs = rs.filter((r) => r.estp);
+  if (filter === 'promo') rs = rs.filter((r) => promo && r.promo === promo);
   if (scope === 'level') rs = rs.filter((r) => r.level === level);
   if (scope === 'daily') rs = rs.filter((r) => r.level === level && r.day === day);
   if (scope === 'weekly') rs = rs.filter((r) => r.level === level && r.week === week);
   const byUser = new Map();
   if (scope === 'global') {
     for (const r of rs) {
-      const u = byUser.get(r.user) || { user: r.user, pseudo: r.pseudo, skin: r.skin, estp: r.estp, best: {} };
+      const u = byUser.get(r.user) || { user: r.user, pseudo: r.pseudo, skin: r.skin, estp: r.estp, promo: r.promo || null, best: {} };
       u.best[r.level] = Math.min(u.best[r.level] ?? Infinity, r.time);
       byUser.set(r.user, u);
     }
@@ -94,7 +123,7 @@ export function rankBoard(rows, { scope, level, day, week, filter, me, friends =
   } else {
     for (const r of rs) {
       const u = byUser.get(r.user);
-      if (!u || r.time < u.time) byUser.set(r.user, { user: r.user, pseudo: r.pseudo, skin: r.skin, estp: r.estp, time: r.time });
+      if (!u || r.time < u.time) byUser.set(r.user, { user: r.user, pseudo: r.pseudo, skin: r.skin, estp: r.estp, promo: r.promo || null, time: r.time });
     }
   }
   const list = [...byUser.values()].sort((a, b) => (scope === 'global' ? b.levels - a.levels : 0) || a.time - b.time || a.pseudo.localeCompare(b.pseudo));
