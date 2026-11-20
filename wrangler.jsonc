@@ -1,0 +1,13 @@
+// Cloudflare Workers (fichiers statiques) : le jeu est le dossier dist/ produit par « npm run build ».
+// Les variables VITE_SUPABASE_* sont des variables de BUILD (réglées dans Workers Builds), pas de ce fichier.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "skingkong",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "none"
+  },
+  "workers_dev": true,
+  "preview_urls": false
+}
