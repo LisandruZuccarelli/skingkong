@@ -2,7 +2,7 @@
 // Même interface que le client Supabase, pour que le jeu ne fasse pas la différence.
 // Les mots de passe ne sont jamais stockés en clair : PBKDF2-SHA256 (Web Crypto) avec sel aléatoire.
 import { pbkdf2 } from './sha256.js';
-import { checkPseudo, checkPassword, checkEmail, checkRun, rankBoard, rankPromos, isPromo, utcDay, utcWeek } from './rules.js';
+import { checkPseudo, checkPassword, checkEmail, checkRun, rankBoard, utcDay, utcWeek } from './rules.js';
 
 const ITER = 100000;
 const ITER_FALLBACK = 100000;
@@ -38,10 +38,10 @@ export class LocalBackend {
     this.user = s ? this.publicUser(this.accounts()[s]) : null;
   }
   accounts() { return this.st.get('local.accounts') || {}; }
-  publicUser(a) { return a ? { id: a.id, pseudo: a.pseudo, estp: !!a.estp, skin: a.skin || 'classic', promo: isPromo(a.promo) ? a.promo : null } : null; }
+  publicUser(a) { return a ? { id: a.id, pseudo: a.pseudo, estp: !!a.estp, skin: a.skin || 'classic' } : null; }
   findBy(fn) { return Object.values(this.accounts()).find(fn); }
 
-  async signUp({ pseudo, email, password, estp, promo }) {
+  async signUp({ pseudo, email, password, estp }) {
     const err = checkPseudo(pseudo) || checkEmail(email) || checkPassword(password);
     if (err) throw new Error(err);
     pseudo = pseudo.trim(); email = email.trim().toLowerCase();
@@ -49,7 +49,7 @@ export class LocalBackend {
     if (this.findBy((a) => a.email === email)) throw new Error('un compte existe deja avec cette adresse');
     const { salt, hash } = await hashPassword(password);
     const id = 'l-' + hex(globalThis.crypto.getRandomValues(new Uint8Array(8)));
-    const acc = { id, pseudo, email, salt, hash, estp: !!estp, promo: isPromo(promo) ? promo : null, skin: 'classic', created: this.now(), friends: [] };
+    const acc = { id, pseudo, email, salt, hash, estp: !!estp, skin: 'classic', created: this.now(), friends: [] };
     const all = this.accounts(); all[id] = acc; this.st.set('local.accounts', all);
     this.st.set('local.session', id);
     this.user = this.publicUser(acc);
@@ -70,12 +70,11 @@ export class LocalBackend {
     const all = this.accounts(); const a = all[this.user.id];
     if ('skin' in patch) a.skin = patch.skin;
     if ('estp' in patch) a.estp = !!patch.estp;
-    if ('promo' in patch) a.promo = isPromo(patch.promo) ? patch.promo : null;
     this.st.set('local.accounts', all);
     this.user = this.publicUser(a);
     // les scores reprennent le skin / le statut ESTP du profil
     const sc = this.st.get('local.scores') || [];
-    for (const r of sc) if (r.user === a.id) { r.skin = a.skin; r.estp = a.estp; r.promo = a.promo || null; }
+    for (const r of sc) if (r.user === a.id) { r.skin = a.skin; r.estp = a.estp; }
     this.st.set('local.scores', sc);
   }
 
@@ -91,7 +90,7 @@ export class LocalBackend {
     this.lastSubmit = now;
     const day = utcDay(now);
     const rows = this.st.get('local.scores') || [];
-    rows.push({ user: this.user.id, pseudo: this.user.pseudo, skin: this.user.skin, estp: this.user.estp, promo: this.user.promo || null, level: run.level, time: Math.round(run.time * 100) / 100, coins: run.coins, deaths: run.deaths, day, week: utcWeek(day), at: now });
+    rows.push({ user: this.user.id, pseudo: this.user.pseudo, skin: this.user.skin, estp: this.user.estp, level: run.level, time: Math.round(run.time * 100) / 100, coins: run.coins, deaths: run.deaths, day, week: utcWeek(day), at: now });
     this.st.set('local.scores', rows.slice(-5000));
     const list = rankBoard(rows, { scope: 'level', level: run.level, filter: 'all', me: this.user.id });
     const mine = list.find((r) => r.me);
@@ -101,12 +100,7 @@ export class LocalBackend {
     const day = utcDay(this.now());
     const me = this.user ? this.user.id : null;
     const friends = this.user ? this.accounts()[me].friends : [];
-    const promo = this.user ? this.user.promo : null;
-    if (scope === 'promos') {
-      const list = rankPromos(this.st.get('local.scores') || [], promo);
-      return { rows: list.slice(0, limit), me: list.find((r) => r.me) || null, total: list.length };
-    }
-    const list = rankBoard(this.st.get('local.scores') || [], { scope, filter, level, day, week: utcWeek(day), me, friends, promo });
+    const list = rankBoard(this.st.get('local.scores') || [], { scope, filter, level, day, week: utcWeek(day), me, friends });
     return { rows: list.slice(0, limit), me: list.find((r) => r.me) || null, total: list.length };
   }
 

@@ -5,7 +5,7 @@ import { panel } from './hud.js';
 import { MenuScene, kongFor, drawIcon } from './menus.js';
 import { drawHatRows } from './catalog.js';
 import { ACHIEVEMENTS } from './progress.js';
-import { SCOPES, FILTERS, PROMOS, promoName } from '../online/rules.js';
+import { SCOPES, FILTERS } from '../online/rules.js';
 import { openForm } from '../online/form.js';
 import { levelLong } from './labels.js';
 import { LEVELS } from '../levels/index.js';
@@ -59,7 +59,6 @@ export class AccountScene extends MenuScene {
         { name: 'pseudo', label: 'Pseudo (affiche au classement)', max: 16, auto: 'username' },
         { name: 'email', label: 'Adresse e-mail', type: 'email', max: 120, auto: 'email' },
         { name: 'password', label: 'Mot de passe (8 caracteres minimum)', type: 'password', max: 72, auto: 'new-password' },
-        { name: 'promo', label: 'Ta promo (classement des promos)', type: 'select', options: [{ value: '', label: 'Je ne dis pas' }, ...PROMOS.map((p) => ({ value: p.id, label: p.id === 'EXT' ? 'Exterieur a l\'ESTP' : p.id === 'ALUMNI' ? 'Ancien eleve' : p.id })) ] },
       ],
       submit: 'Creer',
       note: o.online
@@ -76,12 +75,6 @@ export class AccountScene extends MenuScene {
       note: 'Si tu jouais en invite, ta partie rejoint ton compte (rien n\'est perdu).',
       onSubmit: async (v) => { await o.signIn(v); this.msg = `RE-BONJOUR ${o.user.pseudo.toUpperCase()} !`; g.audio.play('powerup'); },
     });
-  }
-  /** Fait défiler les promos (aucune → 1A → ... → EXT → aucune). */
-  nextPromo() {
-    const o = this.online, ids = [null, ...PROMOS.map((p) => p.id)];
-    const next = ids[(ids.indexOf(o.user.promo || null) + 1) % ids.length];
-    this.run(o.updateProfile({ promo: next }).then(() => (next ? `TU JOUES POUR LA PROMO ${next} (${promoName(next)})` : 'PLUS DE PROMO : HORS CLASSEMENT DES PROMOS')));
   }
   run(p) {
     this.busy = true; this.msg = 'PATIENTE...';
@@ -100,7 +93,6 @@ export class AccountScene extends MenuScene {
       { label: 'SYNCHRONISER MAINTENANT', act: () => this.run(o.sync().then((ok) => (ok ? 'PROGRESSION SYNCHRONISEE' : o.status))) },
       { label: 'MON PROFIL ET MES AMIS', act: () => g.gotoProfile() },
       { label: 'CLASSEMENTS', act: () => g.gotoLeaderboard() },
-      { label: `MA PROMO : ${u.promo || 'AUCUNE'}`, act: () => this.nextPromo() },
       { label: 'SE DECONNECTER', act: () => this.run(o.signOut().then(() => 'DECONNECTE : TA PARTIE RESTE SUR CET APPAREIL')), color: '#ff8a9a' },
     ];
   }
@@ -109,7 +101,7 @@ export class AccountScene extends MenuScene {
     const v = this.game.view;
     optionList(this, this.items(), v.w / 2 + 10, this.listY(), Math.min(220, v.w / 2 - 20));
   }
-  listY() { return this.game.online.user ? 84 : 120; }
+  listY() { return this.game.online.user ? 96 : 120; }
   render(ctx) {
     const g = this.game, v = g.view, o = this.online, u = o.user;
     this.drawFrame(ctx, { keys: '↑/↓ : CHOISIR   SAUT/ENTREE : VALIDER   ECHAP : RETOUR', touch: 'TOUCHE UNE OPTION' });
@@ -119,7 +111,7 @@ export class AccountScene extends MenuScene {
     const rx = v.w / 2 + 10, rw = Math.min(220, v.w / 2 - 20);
     if (u) {
       drawText(ctx, u.pseudo.toUpperCase(), lx, 168, { align: 'center', scale: 2, color: '#ffffff', outline: INK });
-      if (u.estp) { panel(ctx, lx - 56, 188, 112, 13, 'rgba(255,200,61,0.2)', '#ffc83d'); drawText(ctx, 'LISTE ESTP CACHAN', lx, 191, { align: 'center', color: '#ffc83d' }); }
+      if (u.estp) { panel(ctx, lx - 56, 188, 112, 13, 'rgba(255,200,61,0.2)', '#ffc83d'); drawText(ctx, 'LISTE SKINGKONG', lx, 191, { align: 'center', color: '#ffc83d' }); }
       drawText(ctx, 'CONNECTE', rx + rw / 2, 34, { align: 'center', color: '#5cff8a', outline: INK });
       drawText(ctx, modeShort(o), rx + rw / 2, 46, { align: 'center', color: '#9fb2ea', outline: INK });
       const ago = o.lastSync ? Math.max(0, Math.round((Date.now() - o.lastSync) / 60000)) : null;
@@ -128,7 +120,7 @@ export class AccountScene extends MenuScene {
       if (q) drawText(ctx, `${q} RESULTAT${q > 1 ? 'S' : ''} EN ATTENTE D'ENVOI`, rx + rw / 2, 70, { align: 'center', color: '#ffc83d', outline: INK });
     } else {
       drawText(ctx, 'INVITE', lx, 168, { align: 'center', scale: 2, color: '#cfe0ff', outline: INK });
-      const lines = ['UN COMPTE, C\'EST :', '- TA PARTIE SUR TOUS TES APPAREILS', '- TES TEMPS AU CLASSEMENT', '- DES AMIS A DEFIER', '- LA BATAILLE DES PROMOS'];
+      const lines = ['UN COMPTE, C\'EST :', '- TA PARTIE SUR TOUS TES APPAREILS', '- TES TEMPS AU CLASSEMENT', '- DES AMIS A DEFIER', '- LE CLASSEMENT LISTE SKINGKONG'];
       lines.forEach((l, i) => drawText(ctx, l, rx, 34 + i * 11, { color: i ? '#cfe0ff' : '#ffc83d', outline: INK }));
       drawText(ctx, modeShort(o), rx + rw / 2, 96, { align: 'center', color: '#9fb2ea', outline: INK });
     }
@@ -177,20 +169,20 @@ export class LeaderboardScene extends MenuScene {
   filterX(i) { const tot = FILTERS.reduce((a, _, j) => a + this.filterW(j) + 4, -4); let x = this.game.view.w / 2 - tot / 2; for (let j = 0; j < i; j++) x += this.filterW(j) + 4; return x; }
   render(ctx) {
     const g = this.game, v = g.view, o = g.online;
-    this.drawFrame(ctx, { keys: `←/→ : CLASSEMENT   ↑/↓ : FILTRE${this.scopeId === 'level' ? '   SAUT : NIVEAU SUIVANT' : ''}   ECHAP : RETOUR`, touch: 'TOUCHE LES ONGLETS' });
+    this.drawFrame(ctx, { keys: `←/→ : CLASSEMENT   ↑/↓ : TOUS / AMIS / ESTP${this.scopeId === 'level' ? '   SAUT : NIVEAU SUIVANT' : ''}   ECHAP : RETOUR`, touch: 'TOUCHE LES ONGLETS' });
     const tw = this.tabW();
     SCOPES.forEach((s, i) => {
       const x = this.tabX() + i * tw, on = i === this.scope;
       panel(ctx, x, 26, tw - 2, 14, on ? 'rgba(255,200,61,0.25)' : 'rgba(10,13,36,0.8)', on ? '#ffc83d' : '#2a3060');
       drawText(ctx, s.name, x + tw / 2 - 1, 30, { align: 'center', color: on ? '#ffd23f' : '#9fb2ea' });
     });
-    if (this.scopeId !== 'promos') FILTERS.forEach((f, i) => {
+    FILTERS.forEach((f, i) => {
       const x = this.filterX(i), on = i === this.filter;
       panel(ctx, x, 44, this.filterW(i), 12, on ? 'rgba(126,232,255,0.22)' : 'rgba(10,13,36,0.7)', on ? '#7ee8ff' : '#2a3060');
       drawText(ctx, f.name, x + this.filterW(i) / 2, 47, { align: 'center', color: on ? '#ffffff' : '#7f8cc8' });
     });
     const lvl = this.data ? this.data.level : (this.scopeId === 'level' ? LEVELS[this.levelIdx].id : null);
-    const sub = { global: 'NIVEAUX TERMINES, PUIS SOMME DES MEILLEURS TEMPS', level: `< ${lvl ? levelLong(lvl) : ''} >`, daily: 'NIVEAU DU JOUR (PISTE GENEREE, NOUVELLE CHAQUE JOUR)', weekly: `NIVEAU DE LA SEMAINE : ${lvl ? levelLong(lvl) : '...'}`, promos: 'BATAILLE DES PROMOS : 1 POINT PAR NIVEAU TERMINE PAR UN MEMBRE' }[this.scopeId];
+    const sub = { global: 'NIVEAUX TERMINES, PUIS SOMME DES MEILLEURS TEMPS', level: `< ${lvl ? levelLong(lvl) : ''} >`, daily: 'NIVEAU DU JOUR (PISTE GENEREE, NOUVELLE CHAQUE JOUR)', weekly: `NIVEAU DE LA SEMAINE : ${lvl ? levelLong(lvl) : '...'}` }[this.scopeId];
     drawText(ctx, sub, v.w / 2, 61, { align: 'center', color: this.scopeId === 'global' ? '#9fb2ea' : '#ffc83d', outline: INK });
     const w = Math.min(380, v.w - 16), x = v.w / 2 - w / 2, top = 74, rowH = 13;
     const maxRows = Math.floor((v.h - top - 34) / rowH);
@@ -199,10 +191,7 @@ export class LeaderboardScene extends MenuScene {
     if (this.error) return center(this.error, '#ff8a9a');
     if (!this.data) return center('CHARGEMENT' + '.'.repeat(1 + Math.floor(this.t * 3) % 3));
     let rows = this.data.rows;
-    if (this.scopeId === 'promos') return this.renderPromos(ctx, rows, x, w, top, rowH);
-    const fid = FILTERS[this.filter].id;
-    if (fid === 'promo' && !(o.user && o.user.promo)) return center(o.user ? 'CHOISIS TA PROMO DANS LE MENU COMPTE' : 'CONNECTE-TOI ET CHOISIS TA PROMO', '#ffc83d');
-    if (!rows.length) return center(fid === 'friends' && !o.user ? 'CONNECTE-TOI POUR VOIR TES AMIS' : 'PERSONNE POUR L\'INSTANT : SOIS LE PREMIER !');
+    if (!rows.length) return center(FILTERS[this.filter].id === 'friends' && !o.user ? 'CONNECTE-TOI POUR VOIR TES AMIS' : 'PERSONNE POUR L\'INSTANT : SOIS LE PREMIER !');
     const me = this.data.me;
     rows = rows.slice(0, maxRows);
     if (me && !rows.some((r) => r.me)) rows = [...rows.slice(0, maxRows - 1), me];
@@ -214,35 +203,13 @@ export class LeaderboardScene extends MenuScene {
       const k = kongFor(r.skin || 'classic');
       ctx.drawImage(k.idle, 0, 0, 16, 10, x + 24, y + 1, 16, 10);
       drawText(ctx, r.pseudo.toUpperCase(), x + 44, y + 3, { color: r.me ? '#ffffff' : '#cfe0ff' });
-      let tx = x + 44 + r.pseudo.length * 6 + 6;
-      if (r.estp) { drawText(ctx, 'ESTP', tx, y + 3, { color: '#ffc83d' }); tx += 30; }
-      if (r.promo) drawText(ctx, r.promo, tx, y + 3, { color: '#7ee8ff' });
+      if (r.estp) drawText(ctx, 'SKINGKONG', x + 44 + r.pseudo.length * 6 + 6, y + 3, { color: '#ffc83d' });
       const val = this.scopeId === 'global' ? `${r.levels} NIV.   ${formatTime(r.time)}` : formatTime(r.time);
       drawText(ctx, val, x + w - 6, y + 3, { align: 'right', color: '#ffffff' });
     });
     drawText(ctx, `${this.data.total} JOUEUR${this.data.total > 1 ? 'S' : ''}  -  ${modeLine(o)}`, v.w / 2, v.h - (o.user ? 24 : 35), { align: 'center', color: '#7f8cc8', outline: INK });
   }
 }
-
-LeaderboardScene.prototype.renderPromos = function renderPromos(ctx, rows, x, w, top, rowH) {
-  const g = this.game, v = g.view, o = g.online;
-  const h = rowH + 5;
-  if (!rows.length) drawText(ctx, 'AUCUNE PROMO POUR L\'INSTANT : LANCE LA TIENNE !', v.w / 2, top + 40, { align: 'center', color: '#9fb2ea', outline: INK });
-  const best = rows.length ? Math.max(1, rows[0].levels) : 1;
-  rows.slice(0, Math.floor((v.h - top - 40) / h)).forEach((r, i) => {
-    const y = top + i * h;
-    const podium = ['#ffd23f', '#dfe6f2', '#e0a070'][r.rank - 1];
-    panel(ctx, x, y, w, h - 2, r.me ? 'rgba(126,232,255,0.25)' : 'rgba(10,13,36,0.75)', r.me ? '#7ee8ff' : podium || '#2a3060');
-    ctx.fillStyle = r.me ? 'rgba(126,232,255,0.25)' : 'rgba(255,200,61,0.18)';
-    ctx.fillRect(x + 1, y + 1, Math.round((w - 2) * r.levels / best), h - 4);
-    drawText(ctx, `${r.rank}`, x + 18, y + 5, { align: 'right', color: podium || '#9fb2ea' });
-    drawText(ctx, `${r.promo === 'EXT' || r.promo === 'ALUMNI' ? '' : 'PROMO '}${r.promo}`, x + 28, y + 5, { color: r.me ? '#ffffff' : '#cfe0ff' });
-    drawText(ctx, promoName(r.promo), x + 110, y + 5, { color: '#7f8cc8' });
-    drawText(ctx, `${r.levels} PTS  ${r.players} JOUEUR${r.players > 1 ? 'S' : ''}`, x + w - 6, y + 5, { align: 'right', color: '#ffffff' });
-  });
-  const mine = o.user && o.user.promo;
-  drawText(ctx, mine ? `TU JOUES POUR : ${mine}` : (o.user ? 'CHOISIS TA PROMO DANS LE MENU COMPTE' : 'CONNECTE-TOI ET CHOISIS TA PROMO POUR LA FAIRE GAGNER'), v.w / 2, v.h - (o.user ? 24 : 35), { align: 'center', color: '#ffc83d', outline: INK });
-};
 
 // ---------------------------------------------------------------------------
 // Profil joueur et amis
@@ -266,7 +233,7 @@ export class ProfileScene extends MenuScene {
       fields: [{ name: 'pseudo', label: 'Pseudo', max: 16 }], submit: 'Ajouter',
       onSubmit: async (v) => { const f = await o.addFriend(v.pseudo); this.msg = `${String(f.pseudo).toUpperCase()} AJOUTE A TES AMIS`; this.loadFriends(); },
     }) }];
-    for (const f of this.friends || []) list.push({ label: `${f.pseudo.toUpperCase()}${f.estp ? '  (ESTP)' : ''}`, friend: f, act: () => {
+    for (const f of this.friends || []) list.push({ label: `${f.pseudo.toUpperCase()}${f.estp ? '  (SKINGKONG)' : ''}`, friend: f, act: () => {
       if (this.confirm !== f.id) { this.confirm = f.id; this.msg = `ENCORE UNE FOIS POUR RETIRER ${f.pseudo.toUpperCase()}`; return; }
       this.confirm = null; o.removeFriend(f.id).then(() => { this.msg = 'AMI RETIRE'; this.loadFriends(); });
     } });
@@ -303,7 +270,7 @@ export class ProfileScene extends MenuScene {
     panel(ctx, lx, 28, lw, v.h - 52, 'rgba(10,13,36,0.78)', '#2a3060');
     drawKong(ctx, g, lx + 30, 74, 2, this.t);
     drawText(ctx, u ? u.pseudo.toUpperCase() : 'INVITE', lx + 54, 38, { scale: 2, color: '#ffffff' });
-    drawText(ctx, u ? (u.estp ? 'LISTE ESTP CACHAN' : 'JOUEUR') : 'PAS DE COMPTE', lx + 54, 56, { color: u && u.estp ? '#ffc83d' : '#9fb2ea' });
+    drawText(ctx, u ? (u.estp ? 'LISTE SKINGKONG' : 'JOUEUR') : 'PAS DE COMPTE', lx + 54, 56, { color: u && u.estp ? '#ffc83d' : '#9fb2ea' });
     if (u) drawText(ctx, o.online ? 'COMPTE EN LIGNE' : 'COMPTE LOCAL', lx + 54, 66, { color: '#7f8cc8' });
     this.stats().forEach(([k, val], i) => {
       const col = i % 2, row = Math.floor(i / 2);

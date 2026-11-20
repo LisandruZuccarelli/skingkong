@@ -7,8 +7,7 @@ const CSS = `
 .skf p{margin:0 0 12px;color:#9fb2ea;font-size:13px;line-height:1.4}
 .skf label{display:block;margin:8px 0 3px;color:#cfe0ff;font-size:12px;letter-spacing:1px;text-transform:uppercase}
 .skf input[type=text],.skf input[type=email],.skf input[type=password]{box-sizing:border-box;width:100%;padding:9px 10px;font:inherit;font-size:16px;color:#fff;background:#0a0d24;border:2px solid #2a3060;outline:none}
-.skf select{box-sizing:border-box;width:100%;padding:9px 10px;font:inherit;font-size:16px;color:#fff;background:#0a0d24;border:2px solid #2a3060;outline:none}
-.skf input:focus,.skf select:focus{border-color:#7ee8ff}
+.skf input:focus{border-color:#7ee8ff}
 .skf .chk{display:flex;gap:8px;align-items:center;margin-top:10px;text-transform:none;font-size:13px;color:#fff}
 .skf .chk input{width:18px;height:18px;accent-color:#ffc83d}
 .skf .err{min-height:18px;margin:10px 0 0;color:#ff6b78;font-size:13px}
@@ -21,7 +20,7 @@ const CSS = `
 let styled = false;
 
 /**
- * fields : [{ name, label, type: 'text'|'email'|'password'|'checkbox'|'select', max, auto, options: [{ value, label }] }]
+ * fields : [{ name, label, type: 'text'|'email'|'password'|'checkbox', max, auto }]
  * onSubmit(values) : async ; lève une erreur → message affiché, le formulaire reste ouvert.
  */
 export function openForm(game, { title, intro = '', fields, submit = 'VALIDER', note = '', onSubmit, onClose = () => {} }) {
@@ -33,8 +32,6 @@ export function openForm(game, { title, intro = '', fields, submit = 'VALIDER', 
   back.innerHTML = `<form class="skf" novalidate><h2>${esc(title)}</h2>${intro ? `<p>${esc(intro)}</p>` : ''}
     ${fields.map((f) => f.type === 'checkbox'
       ? `<label class="chk"><input type="checkbox" name="${f.name}"> ${esc(f.label)}</label>`
-      : f.type === 'select'
-      ? `<label for="skf-${f.name}">${esc(f.label)}</label><select id="skf-${f.name}" name="${f.name}">${(f.options || []).map((o) => `<option value="${esc(o.value)}">${esc(o.label)}</option>`).join('')}</select>`
       : `<label for="skf-${f.name}">${esc(f.label)}</label><input id="skf-${f.name}" name="${f.name}" type="${f.type || 'text'}" maxlength="${f.max || 80}" autocomplete="${f.auto || 'off'}" autocapitalize="off" spellcheck="false">`).join('')}
     <div class="err" role="alert"></div>
     <div class="row"><button type="button" class="ko">Annuler</button><button type="submit" class="ok">${esc(submit)}</button></div>
