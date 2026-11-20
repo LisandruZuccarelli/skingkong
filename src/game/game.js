@@ -168,16 +168,29 @@ export class Game {
   startLevel(id) { this.save.lastLevel = id; this.persist(); this.goto(() => new LevelScene(this, getLevel(id))); }
   nextLevel(id) { const n = nextLevelId(id); if (n) this.startLevel(n); else this.gotoMap(id); }
 
+  /** Sortie du plein écran par ÉCHAP sur les navigateurs sans Keyboard Lock (Firefox, Safari) : la partie se met en pause. */
+  watchFullscreen() {
+    document.addEventListener('fullscreenchange', () => {
+      if (document.fullscreenElement) return;
+      try { navigator.keyboard && navigator.keyboard.unlock && navigator.keyboard.unlock(); } catch (_) { /* non supporté */ }
+      const sc = this.scene;
+      if (sc instanceof LevelScene && sc.state === 'play') { sc.state = 'paused'; sc.pauseIndex = 0; this.audio.setSlide(0); this.music.muffle(true); }
+    });
+  }
+
   toggleFullscreen() {
     const d = document;
     if (!d.fullscreenElement) {
       const el = d.documentElement;
-      (el.requestFullscreen || el.webkitRequestFullscreen || (() => {})).call(el);
+      const req = (el.requestFullscreen || el.webkitRequestFullscreen || (() => {})).call(el);
+      // Chrome / Edge : on garde ÉCHAP pour le jeu (RETOUR / PAUSE) ; maintenir ÉCHAP quitte le plein écran.
+      Promise.resolve(req).then(() => { if (navigator.keyboard && navigator.keyboard.lock) return navigator.keyboard.lock(['Escape']); }).catch(() => {});
       try { screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {}); } catch (_) { /* non supporté */ }
     } else (d.exitFullscreen || d.webkitExitFullscreen).call(d);
   }
 
   start() {
+    this.watchFullscreen();
     let last = performance.now();
     const loop = (now) => {
       // dt variable, plafonné pour éviter les sauts énormes après un onglet en arrière-plan.
