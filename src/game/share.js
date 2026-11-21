@@ -1,6 +1,6 @@
 // Partage du score : une image (format story / post 1080×1350) avec le temps, Kong et le QR code du jeu,
 // envoyée au menu de partage du téléphone (Instagram, WhatsApp...) ou téléchargée sur ordinateur.
-import { drawText } from '../engine/font.js';
+import { drawText, measure } from '../engine/font.js';
 import { drawHatRows } from './catalog.js';
 import { buildLogo } from './logo.js';
 
@@ -62,6 +62,36 @@ export function drawCard(game, card) {
   drawText(ctx, 'SCANNE ET JOUE', 90, 1200, { align: 'left', scale: 4, color: '#2456b8', shadow: null });
   drawText(ctx, GAME_URL.replace('https://', '').toUpperCase(), W / 2, H - 70, { align: 'center', scale: 3, color: '#0a0d24', shadow: null });
   drawText(ctx, 'LISTE SKI ESTP CACHAN 2027', W / 2, H - 40, { align: 'center', scale: 2, color: '#2456b8', shadow: null });
+  return c;
+}
+
+/** Image d'aperçu des liens (Google, WhatsApp, réseaux) : 1200×630, générée une fois puis publiée en public/og.png. */
+export function drawOgCard(game) {
+  const OW = 1200, OH = 630;
+  const c = document.createElement('canvas'); c.width = OW; c.height = OH;
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  const grd = ctx.createLinearGradient(0, 0, 0, OH);
+  grd.addColorStop(0, '#1a2a8a'); grd.addColorStop(0.6, '#0e1650'); grd.addColorStop(1, '#0a0d24');
+  ctx.fillStyle = grd; ctx.fillRect(0, 0, OW, OH);
+  let s = 11;
+  const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  for (let i = 0; i < 90; i++) { const z = 3 + Math.floor(rnd() * 3) * 3; ctx.fillRect(Math.floor(rnd() * OW), Math.floor(rnd() * OH), z, z); }
+  ctx.fillStyle = '#2456b8';
+  ctx.beginPath(); ctx.moveTo(0, 470); ctx.lineTo(260, 360); ctx.lineTo(560, 450); ctx.lineTo(880, 330); ctx.lineTo(OW, 430); ctx.lineTo(OW, OH); ctx.lineTo(0, OH); ctx.fill();
+  ctx.fillStyle = '#eef6ff';
+  ctx.beginPath(); ctx.moveTo(0, 540); ctx.lineTo(OW, 500); ctx.lineTo(OW, OH); ctx.lineTo(0, OH); ctx.fill();
+  const logo = gameLogo || (gameLogo = buildLogo());
+  const ls = Math.floor(760 / logo.w);
+  ctx.drawImage(logo.canvas, Math.round(OW - 60 - logo.w * ls), 70, logo.w * ls, logo.h * ls);
+  const k = game.sprites.kong.win, ks = 16;
+  const kx = 80, ky = 540 - k.height * ks;
+  ctx.drawImage(k, kx, ky, k.width * ks, k.height * ks);
+  const tx = Math.min(OW - 60 - (logo.w * ls) / 2, OW - 50 - measure('JEU DE PLATEFORME GRATUIT', 4) / 2);
+  drawText(ctx, 'JEU DE PLATEFORME GRATUIT', tx, 70 + logo.h * ls + 40, { align: 'center', scale: 4, color: '#ffd23f', outline: '#0a0d24' });
+  drawText(ctx, 'DANS TON NAVIGATEUR', tx, 70 + logo.h * ls + 84, { align: 'center', scale: 4, color: '#ffffff', outline: '#0a0d24' });
+  drawText(ctx, 'LISTE SKI ESTP CACHAN 2027', OW / 2, OH - 50, { align: 'center', scale: 4, color: '#2456b8', shadow: null });
   return c;
 }
 

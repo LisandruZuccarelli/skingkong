@@ -5,17 +5,43 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#0a0d24" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="description" content="SkingKong | ESTP CACHAN | Liste ski 2027" />
+  <meta name="description" content="SkingKong, le jeu de plateforme rétro de la liste ski ESTP Cachan 2027 : 4 mondes enneigés, des boss, des classements entre amis. Gratuit, dans le navigateur, sur téléphone et ordinateur." />
+  <meta name="google-site-verification" content="_EaReI92XokB4ZYl47rQFeXuvMZMOdVDxd6-avu_erY" />
+  <link rel="canonical" href="https://skingkong.estp-ski.workers.dev/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="SkingKong" />
+  <meta property="og:title" content="SkingKong - le jeu de la liste ski ESTP Cachan 2027" />
+  <meta property="og:description" content="Jeu de plateforme rétro gratuit : 4 mondes enneigés, des boss et des classements. Bats mon temps !" />
+  <meta property="og:url" content="https://skingkong.estp-ski.workers.dev/" />
+  <meta property="og:image" content="https://skingkong.estp-ski.workers.dev/og.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale" content="fr_FR" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://skingkong.estp-ski.workers.dev/og.png" />
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"SkingKong","url":"https://skingkong.estp-ski.workers.dev/","image":"https://skingkong.estp-ski.workers.dev/og.png","description":"Jeu de plateforme rétro de la liste ski ESTP Cachan 2027 : 4 mondes, des boss, des classements.","genre":"Plateforme","gamePlatform":["Navigateur web","Mobile"],"applicationCategory":"Game","operatingSystem":"Tous","inLanguage":"fr","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"},"author":{"@type":"Organization","name":"Liste ski ESTP Cachan 2027"}}</script>
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" href="./icon.svg" type="image/svg+xml" />
-  <title>SkingKong | ESTP Cachan</title>
+  <title>SkingKong - le jeu de plateforme de la liste ski ESTP Cachan 2027</title>
   <style>
     html, body { margin: 0; height: 100%; background: #0a0d24; overflow: hidden; touch-action: none; overscroll-behavior: none; -webkit-user-select: none; user-select: none; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
     canvas { display: block; width: 100vw; height: 100vh; height: 100dvh; image-rendering: pixelated; outline: none; }
   </style>
 </head>
 <body>
-  <canvas id="game" tabindex="0"></canvas>
+  <canvas id="game" tabindex="0" aria-label="SkingKong, jeu de plateforme"></canvas>
+  <main class="sr-only">
+    <h1>SkingKong : le jeu de plateforme de la liste ski ESTP Cachan 2027</h1>
+    <p>Incarne Kong, le yéti skieur, dans un jeu de plateforme rétro en pixel art, gratuit et jouable directement dans le navigateur, sur téléphone comme sur ordinateur.</p>
+    <ul>
+      <li>4 mondes enneigés : l'aube sur la station, la tempête, le glacier et la nuit, avec tyroliennes, télésièges et avalanches.</li>
+      <li>Un boss à la fin de chaque monde.</li>
+      <li>Classements en ligne par niveau, entre amis et pour la liste SkingKong, niveau du jour et de la semaine.</li>
+      <li>Boutique de tenues, succès, défis, modes bonus et éditeur de niveaux.</li>
+    </ul>
+    <p>Un jeu créé par la liste ski de l'ESTP Cachan pour 2027. Bats mon temps !</p>
+  </main>
   <script type="module" src="./src/main.js"></script>
 </body>
 </html>
