@@ -96,6 +96,16 @@ export class LocalBackend {
     const mine = list.find((r) => r.me);
     return { rank: mine ? mine.rank : null, of: list.length };
   }
+  async submitBest(run) {
+    if (!this.user) throw new Error('non connecte');
+    const err = checkRun(this.limits[run.level], run);
+    if (err) throw new Error(err);
+    const rows = this.st.get('local.scores') || [];
+    if (rows.some((r) => r.user === this.user.id && r.level === run.level && r.time <= run.time)) return { inserted: false };
+    rows.push({ user: this.user.id, pseudo: this.user.pseudo, skin: this.user.skin, estp: this.user.estp, level: run.level, time: run.time, coins: run.coins, deaths: run.deaths, day: -1, week: -1, at: this.now() });
+    this.st.set('local.scores', rows.slice(-5000));
+    return { inserted: true };
+  }
   async board({ scope, filter = 'all', level, limit = 50 }) {
     const day = utcDay(this.now());
     const me = this.user ? this.user.id : null;

@@ -13,8 +13,11 @@ function mergeBest(a = {}, b = {}) {
     const x = a[id], y = b[id];
     if (!x || !y) { out[id] = JSON.parse(JSON.stringify(x || y)); continue; }
     const sx = x.stars || [], sy = y.stars || [];
+    const real = (o) => (o.assisted ? Infinity : num(o.time) || Infinity);
+    const both = x.assisted && y.assisted;
     out[id] = {
-      time: Math.min(num(x.time) || Infinity, num(y.time) || Infinity),
+      time: both ? Math.min(num(x.time) || Infinity, num(y.time) || Infinity) : Math.min(real(x), real(y)),
+      ...(both ? { assisted: true } : {}),
       rating: Math.max(num(x.rating), num(y.rating)),
       coins: Math.max(num(x.coins), num(y.coins)),
       stars: Array.from({ length: Math.max(sx.length, sy.length) }, (_, i) => !!(sx[i] || sy[i])),

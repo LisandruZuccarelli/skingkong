@@ -106,6 +106,13 @@ export class SupabaseBackend {
     const r = await this.http('/rest/v1/rpc/submit_run', { method: 'POST', body: { p_level: run.level, p_time: Math.round(run.time * 100) / 100, p_coins: run.coins, p_deaths: run.deaths } });
     return { rank: r && r.rank, of: r && r.total };
   }
+  /** Rattrapage d'un meilleur temps de la sauvegarde (hors classements du jour et de la semaine). */
+  async submitBest(run) {
+    if (!this.user) throw new Error('non connecte');
+    const err = checkRun(this.limits[run.level], run);
+    if (err) throw new Error(err);
+    return this.http('/rest/v1/rpc/submit_best', { method: 'POST', body: { p_level: run.level, p_time: run.time, p_coins: run.coins, p_deaths: run.deaths } });
+  }
   async board({ scope, filter = 'all', level = null, limit = 50 }) {
     const rows = await this.http('/rest/v1/rpc/leaderboard', { method: 'POST', auth: !!this.user, body: { p_scope: scope, p_filter: filter, p_level: level, p_limit: limit } });
     const list = rows.map((r) => ({ rank: r.rank, user: r.user_id, pseudo: r.pseudo, skin: r.skin, estp: r.estp, time: r.total_time, levels: r.levels, me: r.is_me }));

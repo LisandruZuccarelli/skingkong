@@ -478,10 +478,13 @@ export class LevelScene {
     const prev = this.game.save.best[this.data.id];
     // temps assisté : le niveau est validé mais le chrono n'est pas retenu s'il existe déjà un vrai temps
     const keepTime = !this.assisted || !prev;
-    const newRecord = !this.assisted && (!prev || this.time < prev.time);
+    const newRecord = !this.assisted && (!prev || prev.assisted || this.time < prev.time);
+    // un vrai temps remplace toujours un temps assisté
+    const realTime = !this.assisted && prev && prev.assisted ? this.time : null;
     this.results = { time: this.time, coins: this.coins, allCoins, allStars, underPar, rating, deaths: this.deaths, newRecord, prevTime: prev ? prev.time : null };
     this.game.save.best[this.data.id] = {
-      time: !keepTime ? prev.time : prev ? Math.min(prev.time, this.time) : this.time,
+      time: realTime ?? (!keepTime ? prev.time : prev ? Math.min(prev.time, this.time) : this.time),
+      ...((prev ? prev.assisted && this.assisted : this.assisted) ? { assisted: true } : {}),
       rating: Math.max(prev ? prev.rating : 0, rating),
       coins: Math.max(prev ? prev.coins : 0, this.coins),
       stars: (prev ? prev.stars : []).map((v, i) => v || this.stars[i]).concat(this.stars.slice((prev ? prev.stars : []).length)),
@@ -504,7 +507,7 @@ export class LevelScene {
     const on = this.game.online;
     if (this.assisted) this.results.online = { msg: 'MODE ASSISTE : HORS CLASSEMENT' };
     else if (on && !this.game.probe) {
-      if (!on.user) this.results.online = { msg: 'COMPTE : TES TEMPS AU CLASSEMENT' };
+      if (!on.user) this.results.online = { msg: 'CREE UN COMPTE : CE TEMPS IRA AU CLASSEMENT' };
       else {
         this.results.online = { msg: 'ENVOI AU CLASSEMENT...' };
         on.submit({ level: this.data.id, time: this.time, coins: this.coins, deaths: this.deaths }).then((r) => {

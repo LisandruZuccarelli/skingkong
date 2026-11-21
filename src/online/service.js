@@ -59,6 +59,36 @@ export class Online {
     if (g.progress && u.skin !== g.save.equip.skin) this.backend.updateProfile({ skin: g.save.equip.skin }).catch(() => {});
     this.lastSync = this.now();
     this.status = remote ? 'progression synchronisee' : 'progression envoyee sur ton compte';
+    this.backfill();
+  }
+
+  /**
+   * Rattrapage : les meilleurs temps de la sauvegarde (niveaux finis en invité, sur un autre appareil,
+   * ou dont l'envoi a échoué) sont envoyés au classement. Le serveur ne garde que ceux qui battent le record du joueur.
+   */
+  pendingBests() {
+    const u = this.user;
+    if (!u) return [];
+    const sent = this.st.get('sent.best.' + u.id) || {};
+    const ids = new Set(this.levels.map((l) => l.id));
+    return Object.entries(this.game.save.best || {})
+      .filter(([id, b]) => ids.has(id) && b && !b.assisted && b.time > 0 && !(sent[id] <= Math.round(b.time * 100) / 100))
+      .map(([id, b]) => ({ level: id, time: Math.round(b.time * 100) / 100, coins: Math.max(0, Math.floor(b.coins || 0)), deaths: 0 }));
+  }
+  async backfill() {
+    if (this.backfilling || !this.user || !this.backend.submitBest) return;
+    this.backfilling = true;
+    const key = 'sent.best.' + this.user.id;
+    try {
+      for (const run of this.pendingBests()) {
+        try { await this.backend.submitBest(run); }
+        catch (e) {
+          // temps refusé par les contrôles : on n'insiste pas ; autre erreur (réseau, serveur) : on réessaiera plus tard
+          if (!/temps|forfaits|chutes|inconnu|impossible|bad_run/i.test(e.message)) break;
+        }
+        this.st.set(key, { ...(this.st.get(key) || {}), [run.level]: run.time });
+      }
+    } finally { this.backfilling = false; }
   }
 
   /** Remplace la sauvegarde du jeu sur place (Progress garde la même référence). */
@@ -85,6 +115,7 @@ export class Online {
       await this.backend.storeSave(cloudPayload(this.game.save));
       this.lastSync = this.now(); this.dirty = false;
       this.status = 'progression synchronisee';
+      this.backfill();
       return true;
     } catch (e) { this.status = e.message; return false; }
     finally { this.syncing = false; }
@@ -108,7 +139,12 @@ export class Online {
   async submit(run) {
     if (!this.user) return { error: 'connecte-toi pour entrer au classement' };
     const item = { ...run, user: this.user.id };
-    try { return await this.backend.submitRun(item); }
+    try {
+      const r = await this.backend.submitRun(item);
+      const key = 'sent.best.' + this.user.id, sent = this.st.get(key) || {}, t = Math.round(run.time * 100) / 100;
+      if (!(sent[run.level] <= t)) this.st.set(key, { ...sent, [run.level]: t });
+      return r;
+    }
     catch (e) {
       if (/connexion|reseau|patiente/.test(e.message)) { this.st.set('pending.runs', [...this.queue(), item].slice(-50)); return { error: 'hors ligne : envoi plus tard' }; }
       return { error: e.message };
