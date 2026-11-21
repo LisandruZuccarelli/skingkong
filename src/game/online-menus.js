@@ -139,37 +139,74 @@ export class LeaderboardScene extends MenuScene {
     const stages = LEVELS.map((l) => l.id);
     this.levelIdx = Math.max(0, stages.indexOf(game.save.lastLevel || '1-1'));
     this.data = null; this.error = ''; this.reqId = 0;
+    this.row = 0; this.holdT = 0; this.repT = 0; this.loadIn = 0;
+    game.input.wheel = 0;
     this.load();
   }
   get scopeId() { return SCOPES[this.scope].id; }
   load() {
+    this.loadIn = 0;
     const id = ++this.reqId;
     this.data = null; this.error = '';
     this.game.online.board({ scope: this.scopeId, filter: FILTERS[this.filter].id, level: LEVELS[this.levelIdx].id, limit: 50 })
       .then((d) => { if (id === this.reqId) this.data = d; })
       .catch((e) => { if (id === this.reqId) this.error = String(e.message).toUpperCase(); });
   }
+  /** Lignes réglables au clavier : onglet, filtre, puis niveau (vue PAR NIVEAU). */
+  rows() { return this.scopeId === 'level' ? ['scope', 'filter', 'level'] : ['scope', 'filter']; }
+  levelBox() { const v = this.game.view, w = Math.min(260, v.w - 16); return { x: v.w / 2 - w / 2, y: 58, w, h: 13, btn: 22 }; }
   update(dt) {
     if (!this.baseUpdate(dt)) return;
-    const g = this.game, inp = g.input, v = g.view;
-    let changed = false;
-    if (inp.pressed.right || inp.pressed.left) { this.scope = (this.scope + (inp.pressed.right ? 1 : SCOPES.length - 1)) % SCOPES.length; changed = true; }
-    if (inp.pressed.down || (inp.pressed.up && !inp.pressed.confirm)) { this.filter = (this.filter + (inp.pressed.down ? 1 : FILTERS.length - 1)) % FILTERS.length; changed = true; }
-    if (this.scopeId === 'level' && (inp.pressed.confirm || (inp.pressed.jump && !inp.held.up))) { this.levelIdx = (this.levelIdx + 1) % LEVELS.length; changed = true; }
-    // tactile : onglets et filtres
+    const g = this.game, inp = g.input;
+    const rows = this.rows();
+    let changed = false, soon = false;
+    // ↑/↓ : choisir la ligne ; ←/→ : changer sa valeur (dans les deux sens)
+    if (inp.pressed.down && this.row < rows.length - 1) { this.row++; g.audio.play('move'); }
+    if (inp.pressed.up && !inp.pressed.confirm && this.row > 0) { this.row--; g.audio.play('move'); }
+    let d = inp.pressed.right ? 1 : inp.pressed.left ? -1 : 0;
+    // niveau : flèche maintenue = défilement rapide
+    const held = inp.held.right ? 1 : inp.held.left ? -1 : 0;
+    if (rows[this.row] === 'level' && held && !d) { this.holdT += dt; if (this.holdT > 0.35) { this.repT -= dt; if (this.repT <= 0) { d = held; this.repT = 0.08; } } }
+    else if (!held) { this.holdT = 0; this.repT = 0; }
+    if (d) {
+      const r = rows[this.row];
+      if (r === 'scope') this.scope = (this.scope + d + SCOPES.length) % SCOPES.length;
+      if (r === 'filter') this.filter = (this.filter + d + FILTERS.length) % FILTERS.length;
+      if (r === 'level') { this.stepLevel(d); soon = true; }
+      changed = true;
+    }
+    // souris : la molette fait défiler les niveaux
+    if (inp.wheel) { if (this.scopeId === 'level') { this.stepLevel(inp.wheel > 0 ? 1 : -1); soon = changed = true; } inp.wheel = 0; }
+    // tactile / souris : onglets, filtres, boutons < > du niveau
     const tw = this.tabW();
-    SCOPES.forEach((_, i) => { if (inp.tapIn(this.tabX() + i * tw, 26, tw - 2, 14)) { this.scope = i; changed = true; } });
-    FILTERS.forEach((_, i) => { if (inp.tapIn(this.filterX(i), 44, this.filterW(i), 12)) { this.filter = i; changed = true; } });
-    if (this.scopeId === 'level' && inp.tapIn(v.w / 2 - 120, 59, 240, 12)) { this.levelIdx = (this.levelIdx + 1) % LEVELS.length; changed = true; }
-    if (changed) { g.audio.play('move'); this.load(); }
+    SCOPES.forEach((_, i) => { if (inp.tapIn(this.tabX() + i * tw, 26, tw - 2, 14)) { this.scope = i; this.row = 0; changed = true; } });
+    FILTERS.forEach((_, i) => { if (inp.tapIn(this.filterX(i), 44, this.filterW(i), 12)) { this.filter = i; this.row = 1; changed = true; } });
+    if (this.scopeId === 'level') {
+      const L = this.levelBox();
+      if (inp.tapIn(L.x - 4, L.y - 3, L.btn + 30, L.h + 6)) { this.stepLevel(-1); this.row = 2; changed = soon = true; }
+      else if (inp.tapIn(L.x + L.w - L.btn - 26, L.y - 3, L.btn + 30, L.h + 6)) { this.stepLevel(1); this.row = 2; changed = soon = true; }
+    }
+    if (this.row >= this.rows().length) this.row = this.rows().length - 1;
+    if (changed) { g.audio.play('move'); if (soon) { this.data = null; this.error = ''; this.loadIn = 0.25; } else this.load(); }
+    // défilement rapide : on attend que le niveau soit choisi avant de charger
+    if (this.loadIn > 0 && (this.loadIn -= dt) <= 0) this.load();
   }
+  stepLevel(d) { this.levelIdx = (this.levelIdx + d + LEVELS.length) % LEVELS.length; }
   tabW() { return Math.min(90, (this.game.view.w - 16) / SCOPES.length); }
   tabX() { return this.game.view.w / 2 - (this.tabW() * SCOPES.length) / 2; }
   filterW(i) { return FILTERS[i].name.length * 6 + 14; }
   filterX(i) { const tot = FILTERS.reduce((a, _, j) => a + this.filterW(j) + 4, -4); let x = this.game.view.w / 2 - tot / 2; for (let j = 0; j < i; j++) x += this.filterW(j) + 4; return x; }
   render(ctx) {
     const g = this.game, v = g.view, o = g.online;
-    this.drawFrame(ctx, { keys: `←/→ : CLASSEMENT   ↑/↓ : TOUS / AMIS / ESTP${this.scopeId === 'level' ? '   SAUT : NIVEAU SUIVANT' : ''}   ECHAP : RETOUR`, touch: 'TOUCHE LES ONGLETS' });
+    const rowName = this.rows()[this.row];
+    const what = { scope: 'CLASSEMENT', filter: 'TOUS / AMIS / LISTE', level: 'NIVEAU (MAINTENIR = RAPIDE)' }[rowName];
+    this.drawFrame(ctx, { keys: `↑/↓ : LIGNE   ←/→ : ${what}   ECHAP : RETOUR`, touch: this.scopeId === 'level' ? 'TOUCHE LES ONGLETS ET < > POUR CHANGER DE NIVEAU' : 'TOUCHE LES ONGLETS' });
+    // ligne choisie au clavier : petite flèche clignotante à gauche
+    if (!g.input.touchMode && Math.sin(this.t * 8) > -0.4) {
+      const my = { scope: 30, filter: 47, level: 61 }[rowName];
+      const mx = { scope: this.tabX(), filter: this.filterX(0), level: this.levelBox().x }[rowName] - 9;
+      drawText(ctx, '>', mx, my, { color: '#ffc83d', outline: INK });
+    }
     const tw = this.tabW();
     SCOPES.forEach((s, i) => {
       const x = this.tabX() + i * tw, on = i === this.scope;
@@ -182,8 +219,18 @@ export class LeaderboardScene extends MenuScene {
       drawText(ctx, f.name, x + this.filterW(i) / 2, 47, { align: 'center', color: on ? '#ffffff' : '#7f8cc8' });
     });
     const lvl = this.data ? this.data.level : (this.scopeId === 'level' ? LEVELS[this.levelIdx].id : null);
-    const sub = { global: 'NIVEAUX TERMINES, PUIS SOMME DES MEILLEURS TEMPS', level: `< ${lvl ? levelLong(lvl) : ''} >`, daily: 'NIVEAU DU JOUR (PISTE GENEREE, NOUVELLE CHAQUE JOUR)', weekly: `NIVEAU DE LA SEMAINE : ${lvl ? levelLong(lvl) : '...'}` }[this.scopeId];
-    drawText(ctx, sub, v.w / 2, 61, { align: 'center', color: this.scopeId === 'global' ? '#9fb2ea' : '#ffc83d', outline: INK });
+    const sub = { global: 'NIVEAUX TERMINES, PUIS SOMME DES MEILLEURS TEMPS', level: lvl ? levelLong(lvl) : '', daily: 'NIVEAU DU JOUR (PISTE GENEREE, NOUVELLE CHAQUE JOUR)', weekly: `NIVEAU DE LA SEMAINE : ${lvl ? levelLong(lvl) : '...'}` }[this.scopeId];
+    if (this.scopeId === 'level') {
+      // sélecteur de niveau : < NIVEAU >  (n / total)
+      const L = this.levelBox(), on = rowName === 'level';
+      panel(ctx, L.x, L.y, L.w, L.h, on ? 'rgba(255,200,61,0.18)' : 'rgba(10,13,36,0.75)', on ? '#ffc83d' : '#2a3060');
+      panel(ctx, L.x, L.y, L.btn, L.h, 'rgba(255,200,61,0.3)', '#ffc83d');
+      panel(ctx, L.x + L.w - L.btn, L.y, L.btn, L.h, 'rgba(255,200,61,0.3)', '#ffc83d');
+      drawText(ctx, '<', L.x + L.btn / 2, L.y + 3, { align: 'center', color: '#ffffff' });
+      drawText(ctx, '>', L.x + L.w - L.btn / 2, L.y + 3, { align: 'center', color: '#ffffff' });
+      drawText(ctx, sub, v.w / 2, L.y + 3, { align: 'center', color: '#ffd23f' });
+      drawText(ctx, `${this.levelIdx + 1}/${LEVELS.length}`, L.x + L.w - L.btn - 4, L.y + 3, { align: 'right', color: '#7f8cc8' });
+    } else drawText(ctx, sub, v.w / 2, 61, { align: 'center', color: this.scopeId === 'global' ? '#9fb2ea' : '#ffc83d', outline: INK });
     const w = Math.min(380, v.w - 16), x = v.w / 2 - w / 2, top = 74, rowH = 13;
     const maxRows = Math.floor((v.h - top - 34) / rowH);
     const center = (t, c = '#9fb2ea') => drawText(ctx, t, v.w / 2, top + 40, { align: 'center', color: c, outline: INK });

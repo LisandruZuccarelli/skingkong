@@ -22,6 +22,7 @@ if (params.has('probe')) {
       const S = { bonus: B.BonusScene, defi_prep: B.ChallengeSetupScene, editeur: E.EditorScene, shop: M.ShopScene, succes: M.AchievementsScene, defis: M.ChallengesScene, options: M.OptionsScene, compte: O.AccountScene, classements: O.LeaderboardScene, profil: O.ProfileScene }[params.get('menu')];
       if (!S) return;
       game.scene = new S(game);
+      if (params.get('scope')) { game.scene.scope = +params.get('scope'); game.scene.row = +(params.get('row') || 0); game.scene.load(); } // classement : onglet + ligne choisie (captures)
       if (params.get('tab')) { game.scene.cat = +params.get('tab'); game.scene.index = +(params.get('item') || 0); }
       game.fade = 0;
       if (params.get('form') && game.scene.form) game.scene.form(params.get('form')); // formulaire ouvert (capture)
