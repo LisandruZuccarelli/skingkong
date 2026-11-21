@@ -5,7 +5,7 @@ export default {
   name: "Le Yéti géant",
   theme: 'dawn',
   boss: 'yeti',
-  music: 'boss',
+  music: 'boss1',
   height: 17,
   parTime: 60,
   signs: [],

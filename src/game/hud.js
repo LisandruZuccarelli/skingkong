@@ -2,6 +2,7 @@
 import { drawText, wrap, measure } from '../engine/font.js';
 import { levelShort, levelLong } from './labels.js';
 import { formatTime } from '../engine/util.js';
+import { drawVolumeRow } from './volume.js';
 
 const INK = '#0a0d24';
 
@@ -129,32 +130,44 @@ export function drawSignBubble(ctx, sign) {
 
 /** Disposition du menu pause (partagée entre l'affichage et la détection tactile). */
 export function pauseLayout(n, v) {
-  const step = Math.min(18, Math.floor((v.h - 92) / n));
-  const h = n * step + 62;
+  const step = Math.min(18, Math.floor((v.h - 116) / n));
+  const h = n * step + 84;
   const top = Math.round(v.h / 2 - h / 2);
-  return { step, h, top, itemY: (i) => top + 52 + i * step };
+  const w = Math.min(v.w - 24, 220);
+  return { step, h, top, x: Math.round(v.w / 2 - w / 2), w, itemY: (i) => top + 62 + i * step };
 }
 
 export function drawPause(ctx, lvl, v) {
   ctx.fillStyle = 'rgba(10,13,36,0.65)';
   ctx.fillRect(0, 0, v.w, v.h);
+  const g = lvl.game;
   const items = lvl.pauseItems();
   // panneau centré verticalement, interligne resserré si l'écran est bas
-  const { h, top, itemY } = pauseLayout(items.length, v);
-  panel(ctx, v.w / 2 - 100, top, 200, h);
+  const lay = pauseLayout(items.length, v);
+  const { h, top, itemY } = lay;
+  panel(ctx, lay.x - 10, top, lay.w + 20, h);
   drawText(ctx, 'PAUSE', v.w / 2, top + 8, { align: 'center', scale: 2, color: '#ffc83d' });
-  // niveau en cours
+  // niveau en cours + où on en est
   const d = lvl.data;
   const where = d.id ? levelLong(d.id) : '';
   drawText(ctx, where, v.w / 2, top + 26, { align: 'center', color: '#7ee8ff' });
   drawText(ctx, (d.name || '').toUpperCase(), v.w / 2, top + 36, { align: 'center', color: '#ffffff' });
+  const stats = [`TEMPS ${formatTime(lvl.time || 0)}`, `CHUTES ${lvl.deaths || 0}`];
+  if (lvl.totalCoins) stats.push(`PIECES ${lvl.coins || 0}/${lvl.totalCoins}`);
+  drawText(ctx, stats.join('  '), v.w / 2, top + 47, { align: 'center', color: '#9fb2ea' });
   items.forEach((it, i) => {
     const y = itemY(i);
     const sel = i === lvl.pauseIndex;
-    if (sel) { ctx.fillStyle = 'rgba(126,232,255,0.18)'; ctx.fillRect(v.w / 2 - 90, y - 4, 180, 15); }
-    const bounce = sel ? Math.round(Math.sin(lvl.game.time * 8)) : 0;
+    if (sel) { ctx.fillStyle = 'rgba(126,232,255,0.18)'; ctx.fillRect(lay.x, y - 4, lay.w, 15); }
+    if (it.vol) { drawVolumeRow(ctx, g, it.vol, it.label, lay.x, lay.w, y, sel); return; }
+    const bounce = sel ? Math.round(Math.sin(g.time * 8)) : 0;
     drawText(ctx, (sel ? '> ' : '') + it.label, v.w / 2 + bounce, y, { align: 'center', color: sel ? '#ffffff' : '#9fb2ea' });
   });
+  const touch = g.input.touchMode;
+  const help = touch ? '- / + : VOLUME   ON/OFF : COUPER'
+    : items[lvl.pauseIndex] && items[lvl.pauseIndex].vol ? '←/→ VOLUME   ENTREE ON/OFF'
+      : '↑/↓ CHOISIR   ECHAP REPRENDRE';
+  drawText(ctx, help, v.w / 2, top + h - 13, { align: 'center', color: '#545e94' });
 }
 
 export function drawResults(ctx, lvl, v) {

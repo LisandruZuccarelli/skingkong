@@ -36,7 +36,7 @@ function chord(name, oct) {
   - leitmotiv tiré de la mélodie d'accueil : A . C . E - - . G . B . C - A . (transposé et transformé selon le monde).
 */
 export const TRACKS = {
-  title: { file: './music/accueil.mp3', gain: 0.32, layers: {} },
+  title: { file: './music/accueil.mp3', gain: 1, layers: {} },
   // ancien thème synthétisé de l'écran titre (conservé pour l'hors-ligne sans le fichier)
   titleSynth: {
     bpm: 112, chords: ['F', 'G', 'Em', 'Am', 'F', 'G', 'C', 'C'],
@@ -52,7 +52,7 @@ export const TRACKS = {
     layers: { pad: 0, bass: 0, lead: 0, drums: 0.2, arp: 0.5, hat16: 0.75 },
   },
   // Monde 1 - L'aube sur la station : morceau enregistré (même artiste que l'accueil, mi mineur)
-  w1: { file: './music/monde1.mp3', gain: 0.32, layers: {} },
+  w1: { file: './music/monde1.mp3', gain: 1, layers: {} },
   // ancienne version synthétisée du monde 1 (disco), conservée pour essais
   w1Synth: {
     bpm: 116, chords: ['Gmaj7', 'C', 'Gmaj7', 'C', 'Em7', 'C', 'A7', 'D'],
@@ -68,7 +68,9 @@ export const TRACKS = {
       'A5 . C#6 . E6 - - . G6 . E6 . C#6 - A5 .', 'D6 - - - - - - - F#5 . A5 . D6 . F#6 .'] },
     layers: { pad: 0, bass: 0, drums: 0, stab: 0.1, lead: 0.2, arp: 0.5, hat16: 0.7 },
   },
-  w2: {
+  // Monde 2 - La tempête : nappes cinématiques mystérieuses (synthés)
+  w2: { file: './music/monde2.mp3', gain: 1, layers: {} },
+  w2Synth: {
     bpm: 100, chords: ['Am', 'F', 'C', 'G', 'Am', 'F', 'E', 'E'],
     drums: { kick: 'x.......x.....x.', snare: '....x.......x..x', hat: '..x...x...x...x.', hat16: 'xxx.xxx.xxx.xxxx' },
     bass: { pattern: 'R.....R.5...R...', oct: 2, type: 'sawtooth' },
@@ -81,7 +83,9 @@ export const TRACKS = {
       'B4 - - - G#4 - B4 - E5 - - - D5 - - -', 'E5 - - - - - - - . . . . . . . .'] },
     layers: { pad: 0, bass: 0, lead: 0, drums: 0.3, arp: 0.5, hat16: 0.78 },
   },
-  w3: {
+  // Monde 3 - Le glacier : ambient doux et lumineux
+  w3: { file: './music/monde3.mp3', gain: 1, layers: {} },
+  w3Synth: {
     bpm: 110, chords: ['Dm', 'G', 'Dm', 'C', 'Bb', 'C', 'Dm', 'Dm'],
     drums: { kick: 'x.....x...x.....', snare: '....x.......x...', hat: 'x.x.x.x.x.x.x.x.', hat16: '.xx..xx..xx..xxx' },
     bass: { pattern: 'R..R..5.R..R..8.', oct: 2, type: 'triangle' },
@@ -94,7 +98,9 @@ export const TRACKS = {
       'F6 . E6 . D6 . A5 . F5 . A5 . D6 . . .', 'D6 - - - - - - - . . . . . . . .'] },
     layers: { pad: 0, arp: 0, bass: 0.2, lead: 0.1, drums: 0.35, hat16: 0.75 },
   },
-  w4: {
+  // Monde 4 - La nuit / la fête : électro swing
+  w4: { file: './music/monde4.mp3', gain: 1, layers: {} },
+  w4Synth: {
     bpm: 124, chords: ['Fm', 'Db', 'Ab', 'Eb', 'Fm', 'Db', 'Ab', 'Eb'],
     drums: { kick: 'x...x...x...x...', snare: '....x.......x...', hat: '..x...x...x...x.', hat16: 'xxxxxxxxxxxxxxxx', clap: true },
     bass: { pattern: '..R...R...R...R8', oct: 2, type: 'sawtooth' },
@@ -107,6 +113,12 @@ export const TRACKS = {
       'Eb5 . Eb5 . C5 . Eb5 . Ab5 . G5 . F5 . Eb5 .', 'G5 - Bb5 - Eb6 - G6 - - - - - . . . .'] },
     layers: { drums: 0, bass: 0, pad: 0, lead: 0.3, arp: 0.55, hat16: 0.72 },
   },
+  // Boss : un morceau enregistré par monde
+  boss1: { file: './music/boss1.mp3', gain: 1, layers: {} },
+  boss2: { file: './music/boss2.mp3', gain: 1, layers: {} },
+  boss3: { file: './music/boss3.mp3', gain: 1, layers: {} },
+  boss4: { file: './music/boss4.mp3', gain: 1, layers: {} },
+  // ancienne musique de boss synthétisée (conservée pour comparaison : ?ecoute=boss)
   boss: {
     bpm: 150, chords: ['Em', 'C', 'D', 'B'],
     drums: { kick: 'x..x..x.x..x..x.', snare: '....x.......x...', hat: 'x.x.x.x.x.x.x.x.', hat16: 'xxxxxxxxxxxxxxxx' },
@@ -127,6 +139,17 @@ const JINGLES = {
   unlock: { bpm: 200, type: 'square', notes: 'C6 E6 G6 C7 - - - -', bass: '' },
 };
 
+/** Dosage de la musique selon l'écran (× volume MUSIQUE du joueur). */
+export const MIX = { menu: 0.5, map: 0.5, level: 0.2 };
+// les fichiers sont normalisés à -14 LUFS ; les morceaux synthétisés sont ramenés au même volume perçu
+const SYNTH_GAIN = 1;
+// un morceau arrêté depuis moins longtemps reprend là où il était (victoire → retour à la carte)
+const RESUME_MS = 45000;
+// jingles (victoire...) : même volume qu'avant le passage de MUSIQUE à 100 % par défaut
+const JINGLE_GAIN = 0.6;
+// 0,1 s de silence (WAV) pour débloquer les lecteurs audio sur iOS
+const SILENCE = 'data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSADAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==';
+
 const LAYER_NAMES = ['drums', 'hat16', 'bass', 'pad', 'stab', 'arp', 'lead'];
 
 export class Music {
@@ -136,17 +159,37 @@ export class Music {
     this.pending = null;
     this.intensity = 0.3;
     this.current = null;
+    this.mix = MIX.menu;
+    engine.onUnlock = () => this.bless();
     setInterval(() => this.tick(), 25);
   }
 
   get ctx() { return this.e.ctx; }
 
-  play(id, fade = 0.8) {
-    if (this.trackId === id && (this.current || this.pending)) return;
+  /**
+   * Lance un morceau. mix : dosage du contexte (MIX.menu, MIX.map, MIX.level), multiplié par le volume MUSIQUE du joueur.
+   * Le même morceau déjà en cours n'est pas relancé : seul son dosage glisse vers le nouveau (carte → niveau sans coupure).
+   */
+  play(id, mix = MIX.menu, fade = 1.2) {
+    this.mix = mix;
+    if (this.trackId === id && (this.current || this.pending)) { this.rampMix(fade); return; }
     this.trackId = id;
     if (!this.ctx) { this.pending = id; return; }
     this.start(id, fade);
   }
+
+  /** Fait glisser le volume du morceau en cours vers le dosage courant. */
+  rampMix(dur = 1.2) {
+    const cur = this.current;
+    if (!cur || !this.ctx) return;
+    const t = this.ctx.currentTime, g = cur.group.gain;
+    g.cancelScheduledValues(t);
+    g.setValueAtTime(Math.max(0.0001, g.value), t);
+    g.linearRampToValueAtTime(this.level(cur.tr), t + dur);
+  }
+
+  /** Gain du groupe : dosage du contexte × correction propre au morceau (les synthés et les fichiers sont calés au même volume perçu). */
+  level(tr) { return Math.max(0.0001, this.mix * (tr.file ? tr.gain ?? 1 : SYNTH_GAIN)); }
 
   start(id, fade) {
     const ctx = this.ctx;
@@ -156,7 +199,7 @@ export class Music {
     if (!tr) { this.current = null; return; }
     const group = ctx.createGain();
     group.gain.setValueAtTime(0.0001, ctx.currentTime);
-    group.gain.exponentialRampToValueAtTime(1, ctx.currentTime + fade);
+    group.gain.linearRampToValueAtTime(this.level(tr), ctx.currentTime + fade);
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
     filter.frequency.value = 18000;
@@ -182,34 +225,60 @@ export class Music {
 
   stabCut(tr) { const [a, b] = tr.stab.cut || [600, 3000]; return a * Math.pow(b / a, this.intensity); }
 
-  /** Morceau enregistré : un seul élément <audio> réutilisé, branché dans le bus musique (volume, étouffement en pause). */
-  startFile(id, tr, group, filter) {
+  /**
+   * Deux lecteurs <audio> en alternance, débloqués au premier toucher (iOS), pour les fondus enchaînés.
+   * Chacun est branché une fois pour toutes dans le Web Audio (volume, étouffement en pause).
+   */
+  players() {
+    if (this.pool) return this.pool;
     const ctx = this.ctx;
-    if (!this.audioEl) {
-      this.audioEl = new Audio();
-      this.audioEl.loop = true;
-      this.audioEl.preload = 'auto';
-      this.mediaSrc = ctx.createMediaElementSource(this.audioEl);
+    this.pool = [0, 1].map(() => {
+      const el = new Audio();
+      el.loop = true; el.preload = 'auto';
+      const src = ctx.createMediaElementSource(el);
+      const out = ctx.createGain();
+      src.connect(out);
+      return { el, out, file: null, stoppedAt: 0, owner: null };
+    });
+    return this.pool;
+  }
+
+  /** Débloque les lecteurs pendant un geste du joueur (sinon iOS refuse de les lancer plus tard). */
+  bless() {
+    if (this.blessed || !this.ctx) return;
+    this.blessed = true;
+    for (const p of this.players()) {
+      if (p.file) continue;
+      p.el.src = SILENCE;
+      p.el.play().then(() => { if (!p.file) p.el.pause(); }).catch(() => {});
     }
-    const el = this.audioEl;
-    // nouveau morceau : on repart du début (un même morceau qui revient reprend là où il était)
-    if (!el.src.endsWith(tr.file.replace('./', '/'))) { el.src = tr.file; el.currentTime = 0; el.play().catch(() => {}); }
-    try { this.mediaSrc.disconnect(); } catch (_) { /* pas encore branché */ }
-    const g = ctx.createGain();
-    g.gain.value = tr.gain ?? 0.4;
-    this.mediaSrc.connect(g).connect(group);
-    if (el.paused) { el.currentTime = 0; el.play().catch(() => {}); }
-    return { id, tr, group, filter, layers: {}, file: true };
+  }
+
+  startFile(id, tr, group, filter) {
+    const pool = this.players();
+    const prev = this.current && this.current.player;
+    // le lecteur qui a déjà ce morceau (même s'il est en train de s'éteindre), sinon celui qui est libre
+    let p = pool.find((q) => q.file === tr.file) || pool.find((q) => q !== prev) || pool[0];
+    const resume = p.file === tr.file && (!p.el.paused || Date.now() - p.stoppedAt < RESUME_MS);
+    if (p.file !== tr.file) { p.file = tr.file; p.el.src = tr.file; }
+    if (!resume) { try { p.el.currentTime = 0; } catch (_) { /* pas encore chargé */ } }
+    try { p.out.disconnect(); } catch (_) { /* pas encore branché */ }
+    p.out.connect(group);
+    p.owner = group;
+    if (p.el.paused) p.el.play().catch(() => {});
+    return { id, tr, group, filter, layers: {}, file: true, player: p };
   }
 
   fadeOutGroup(cur, fade) {
     const t = this.ctx.currentTime;
     cur.group.gain.cancelScheduledValues(t);
-    cur.group.gain.setValueAtTime(cur.group.gain.value || 0.5, t);
-    cur.group.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(0.05, fade));
+    cur.group.gain.setValueAtTime(Math.max(0.0001, cur.group.gain.value), t);
+    cur.group.gain.linearRampToValueAtTime(0.0001, t + Math.max(0.05, fade));
     setTimeout(() => {
       try { cur.group.disconnect(); } catch (_) { /* déjà détaché */ }
-      if (cur.file && !(this.current && this.current.file) && this.audioEl) this.audioEl.pause();
+      const p = cur.player;
+      // on n'arrête le lecteur que s'il n'a pas été repris entre-temps par un autre morceau
+      if (p && p.owner === cur.group) { p.el.pause(); p.stoppedAt = Date.now(); p.owner = null; }
     }, fade * 1000 + 200);
   }
 
@@ -247,8 +316,9 @@ export class Music {
     if (!cur || !this.ctx) return;
     const t = this.ctx.currentTime;
     cur.group.gain.cancelScheduledValues(t);
-    cur.group.gain.setValueAtTime(amount, t);
-    cur.group.gain.setTargetAtTime(1, t + dur, 0.25);
+    const full = this.level(cur.tr);
+    cur.group.gain.setValueAtTime(Math.max(0.0001, amount * full), t);
+    cur.group.gain.setTargetAtTime(full, t + dur, 0.25);
   }
 
   jingle(name) {
@@ -267,14 +337,14 @@ export class Music {
         if (m !== null) this.voice(type, m + oct, t0 + i * stepDur, len * stepDur * 0.95, vol, this.e.musicBus);
       });
     };
-    play(j.notes, j.type, 0.13);
-    if (j.bass) play(j.bass, 'triangle', 0.18);
+    play(j.notes, j.type, 0.13 * JINGLE_GAIN);
+    if (j.bass) play(j.bass, 'triangle', 0.18 * JINGLE_GAIN);
   }
 
   tick() {
     const ctx = this.ctx;
     if (!ctx) return;
-    if (this.pending) this.start(this.pending, 0.8);
+    if (this.pending) this.start(this.pending, 1.2);
     const cur = this.current;
     if (!cur || cur.file) return;
     const stepDur = 60 / cur.tr.bpm / 4;

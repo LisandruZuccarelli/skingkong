@@ -693,5 +693,23 @@ console.log('Mécaniques de l\'étape 3');
   ok(w.at(5 * T) > 0 && w.at(20 * T) === 0, 'vent actif seulement dans sa zone');
 }
 
+console.log('\nRéglage du son');
+{
+  const { stepVolume, toggleSound, setVolume } = await import('../src/game/volume.js');
+  const g = { settings: { musicVol: 0.2, sfxVol: 0.8 }, applied: 0, applyVolumes() { this.applied++; }, persist() {}, audio: { play() {} } };
+  stepVolume(g, 'musicVol', -1); stepVolume(g, 'musicVol', -1); stepVolume(g, 'musicVol', -1);
+  ok(g.settings.musicVol === 0, 'baisser s\'arrête à 0 %');
+  for (let i = 0; i < 14; i++) stepVolume(g, 'musicVol', 1);
+  ok(g.settings.musicVol === 1, 'monter s\'arrête à 100 % (plus de retour à 0)');
+  toggleSound(g, 'musicVol');
+  ok(g.settings.musicOn === false && g.settings.musicVol === 1, 'OFF coupe la musique et garde le niveau');
+  stepVolume(g, 'musicVol', 1);
+  ok(g.settings.musicOn === true, 'monter le volume rallume la musique');
+  setVolume(g, 'sfxVol', 0);
+  ok(g.settings.sfxOn === false, 'jauge à 0 = effets coupés');
+  toggleSound(g, 'sfxVol');
+  ok(g.settings.sfxOn === true && g.settings.sfxVol === 0.5, 'rallumer à 0 % remet un niveau audible');
+}
+
 console.log(`\n${passes} réussis, ${fails} échoués`);
 process.exit(fails ? 1 : 0);

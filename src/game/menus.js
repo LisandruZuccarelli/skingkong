@@ -1,5 +1,6 @@
 // Écrans de menu : boutique, succès, défis et série, options (volumes, effets, commandes remappables).
 import { Background } from './background.js';
+import { toggleSound, stepVolume, tapVolumeRow, drawVolumeRow } from './volume.js';
 import { drawText, measure, wrap } from '../engine/font.js';
 import { panel } from './hud.js';
 import { CATEGORIES, SKINS, drawHatRows, findItem } from './catalog.js';
@@ -348,7 +349,7 @@ export class OptionsScene extends MenuScene {
   }
   items() {
     const g = this.game, s = g.settings, b = g.input.bindings;
-    const vol = (key, label) => ({ label: `${label} : ${Math.round(s[key] * 100)}%`, act: () => this.vol(key, 0.1, true), adj: (d) => this.vol(key, d * 0.1) });
+    const vol = (key, label) => ({ label, vol: key, act: () => toggleSound(g, key), adj: (d) => stepVolume(g, key, d) });
     return [
       vol('musicVol', 'MUSIQUE'),
       vol('sfxVol', 'EFFETS SONORES'),
@@ -360,14 +361,6 @@ export class OptionsScene extends MenuScene {
       ...REMAP.map(([a, label]) => ({ label: `${label} : ${keyName(b[a][0])}${b[a][1] ? ' / ' + keyName(b[a][1]) : ''}`, act: () => { this.waiting = a; g.input.captureNext((code) => this.bind(a, code)); }, key: true })),
       { label: 'COMMANDES PAR DEFAUT', act: () => { g.input.bindings = JSON.parse(JSON.stringify(DEFAULT_BINDINGS)); delete s.bindings; g.persist(); } },
     ];
-  }
-  vol(key, d, wrap = false) {
-    const g = this.game;
-    let v = Math.round((g.settings[key] + d) * 10) / 10;
-    if (wrap && v > 1.001) v = 0;
-    g.settings[key] = Math.min(1, Math.max(0, v));
-    g.applyVolumes(); g.persist();
-    g.audio.play(key === 'sfxVol' ? 'coin' : 'move');
   }
   bind(action, code) {
     const g = this.game;
@@ -391,7 +384,10 @@ export class OptionsScene extends MenuScene {
     if (it.adj && (inp.pressed.left || inp.pressed.right)) it.adj(inp.pressed.right ? 1 : -1);
     let chosen = -1;
     if (inp.pressed.confirm || (inp.pressed.jump && !inp.held.up)) chosen = this.index;
-    items.forEach((_, i) => { if (inp.tapIn(g.view.w / 2 - 130, this.rowY(i) - 3, 260, 12)) { if (i === this.index) chosen = i; else this.index = i; } });
+    items.forEach((row, i) => {
+      if (row.vol) { if (tapVolumeRow(g, row.vol, g.view.w / 2 - 110, 220, this.rowY(i))) this.index = i; return; }
+      if (inp.tapIn(g.view.w / 2 - 130, this.rowY(i) - 3, 260, 12)) { if (i === this.index) chosen = i; else this.index = i; }
+    });
     if (chosen >= 0) { g.audio.play('select'); items[chosen].act(); }
   }
   // réglages généraux, puis bloc des commandes (titre intercalé), puis « par défaut »
@@ -405,6 +401,7 @@ export class OptionsScene extends MenuScene {
     items.forEach((it, i) => {
       const y = this.rowY(i), sel = i === this.index;
       if (sel) { ctx.fillStyle = 'rgba(126,232,255,0.18)'; ctx.fillRect(v.w / 2 - 130, y - 3, 260, 13); }
+      if (it.vol) { drawVolumeRow(ctx, g, it.vol, it.label, v.w / 2 - 110, 220, y, sel); return; }
       const waiting = it.key && this.waiting && sel;
       const label = waiting ? (Math.sin(this.t * 8) > 0 ? 'APPUIE SUR UNE TOUCHE... (ECHAP : ANNULER)' : '') : (sel ? '> ' : '') + it.label;
       drawText(ctx, label, v.w / 2, y, { align: 'center', color: waiting ? '#ffc83d' : sel ? '#ffffff' : '#9fb2ea', outline: INK });

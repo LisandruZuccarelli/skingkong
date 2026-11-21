@@ -5,7 +5,7 @@ export default {
   name: "DJ Yéti",
   theme: 'night',
   boss: 'dj',
-  music: 'boss',
+  music: 'boss4',
   height: 17,
   parTime: 90,
   signs: [],

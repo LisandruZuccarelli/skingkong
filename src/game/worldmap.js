@@ -3,6 +3,7 @@ import { Background } from './background.js';
 import { levelShort } from './labels.js';
 import { Weather } from './weather.js';
 import { THEMES } from './themes.js';
+import { MIX } from '../engine/music.js';
 import { drawText } from '../engine/font.js';
 import { formatTime, damp } from '../engine/util.js';
 import { panel } from './hud.js';
@@ -36,7 +37,7 @@ export class WorldMapScene {
 
   bg() { return this.bgs[this.theme] || (this.bgs[this.theme] = new Background(this.theme)); }
   weather() { const th = THEMES[this.theme]; return this.weathers[this.theme] || (this.weathers[this.theme] = new Weather(th.weather, th.wind)); }
-  playMusic() { this.game.music.play(THEMES[this.theme].music); }
+  playMusic() { this.game.music.play(THEMES[this.theme].music, MIX.map); }
 
   /** Position des nœuds sur l'écran (chemin sinueux). */
   nodePos(i, v) {

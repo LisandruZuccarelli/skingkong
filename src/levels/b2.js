@@ -5,7 +5,7 @@ export default {
   name: "La Dameuse folle",
   theme: 'storm',
   boss: 'groomer',
-  music: 'boss',
+  music: 'boss2',
   height: 17,
   parTime: 70,
   signs: [],

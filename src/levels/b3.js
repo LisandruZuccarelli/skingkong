@@ -5,7 +5,7 @@ export default {
   name: "Le Dragon de glace",
   theme: 'glacier',
   boss: 'dragon',
-  music: 'boss',
+  music: 'boss3',
   height: 17,
   parTime: 55,
   signs: [],

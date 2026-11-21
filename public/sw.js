@@ -2,7 +2,7 @@
 // - la page (navigation) : réseau d'abord, cache en secours hors ligne ;
 // - les fichiers du build (noms hachés, donc immuables) : cache d'abord ;
 // - le reste du même domaine : cache, mis à jour en arrière-plan.
-const CACHE = 'skingkong-v3';
+const CACHE = 'skingkong-v4';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg'];
 
 self.addEventListener('install', (e) => {

@@ -48,7 +48,13 @@ export class Game {
     this.input = new Input(this);
     this.sprites = buildSprites();
     this.save = loadSave();
-    this.settings = { reduceFx: false, musicVol: 0.6, sfxVol: 0.8, ...this.save.settings };
+    this.settings = { reduceFx: false, musicVol: 1, sfxVol: 0.8, ...this.save.settings };
+    // v2 du son : MUSIQUE devient un volume général (100 % par défaut), dosé ensuite par écran (carte 50 %, niveaux 20 %)
+    if (!this.settings.audioV2) {
+      if (this.settings.musicVol === 0) this.settings.musicOn = false;
+      this.settings.musicVol = 1;
+      this.settings.audioV2 = true;
+    }
     this.save.settings = this.settings;
     this.input.loadBindings(this.settings.bindings);
     // progression : porte-monnaie, objets, succès, défis ; série de connexion versée au lancement
@@ -99,8 +105,9 @@ export class Game {
   }
 
   applyVolumes() {
-    this.audio.volumes.music = this.settings.musicVol;
-    this.audio.volumes.sfx = this.settings.sfxVol;
+    const s = this.settings;
+    this.audio.volumes.music = s.musicOn === false ? 0 : s.musicVol;
+    this.audio.volumes.sfx = s.sfxOn === false ? 0 : s.sfxVol;
     this.audio.applyVolumes();
   }
 

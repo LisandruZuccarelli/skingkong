@@ -14,7 +14,9 @@ import { Zipline, Chairlift, Avalanche, WindField, updateZip, ZIP } from './mech
 import { Particles } from '../engine/particles.js';
 import { Camera } from '../engine/camera.js';
 import { clamp, damp, aabb, formatTime } from '../engine/util.js';
+import { MIX } from '../engine/music.js';
 import { shareCard, preloadShare } from './share.js';
+import { toggleSound, stepVolume, tapVolumeRow } from './volume.js';
 import { drawHUD, drawTouchControls, drawPause, pauseLayout, drawResults, drawBanners, drawSignBubble, drawDebug, touchLayout, drawDeath } from './hud.js';
 
 const SNOW = ['#ffffff', '#eef6ff', '#cfe0ff'];
@@ -139,7 +141,7 @@ export class LevelScene {
     this.bg = new Background(name);
     this.weather = new Weather(this.theme.weather, this.theme.wind);
     this.darkAmount = this.data.dark ?? this.theme.dark;
-    this.game.music.play(this.data.music || this.theme.music);
+    this.game.music.play(this.data.music || this.theme.music, MIX.level);
   }
 
   // ---------- Événements de jeu & juice ----------
@@ -777,9 +779,16 @@ export class LevelScene {
     if (inp.pressed.confirm || (inp.pressed.jump && !inp.held.up)) chosen = this.pauseIndex;
     const v = g.view;
     const lay = pauseLayout(items.length, v);
+    // souris : le survol sélectionne la ligne (seulement quand la souris bouge, pour ne pas gêner le clavier)
+    const m = inp.mouse;
+    if (m && (!this.pauseMouse || m.x !== this.pauseMouse.x || m.y !== this.pauseMouse.y)) {
+      this.pauseMouse = { x: m.x, y: m.y };
+      items.forEach((_, i) => { const y = lay.itemY(i); if (m.x >= lay.x && m.x <= lay.x + lay.w && m.y >= y - 4 && m.y < y - 4 + lay.step) this.pauseIndex = i; });
+    }
     items.forEach((it, i) => {
       const y = lay.itemY(i);
-      if (inp.tapIn(v.w / 2 - 90, y - 4, 180, lay.step)) chosen = i;
+      if (it.vol) { if (tapVolumeRow(g, it.vol, lay.x, lay.w, y)) this.pauseIndex = i; }
+      else if (inp.tapIn(lay.x, y - 4, lay.w, lay.step)) chosen = i;
     });
     if (inp.pressed.pause) chosen = 0;
     const it = items[this.pauseIndex];
@@ -790,25 +799,17 @@ export class LevelScene {
     }
   }
 
-  adjustVol(key, d, wrap = false) {
-    const g = this.game;
-    let v = Math.round((g.settings[key] + d) * 10) / 10;
-    if (wrap && v > 1.001) v = 0;
-    g.settings[key] = clamp(v, 0, 1);
-    g.applyVolumes();
-    g.persist();
-    g.audio.play(key === 'sfxVol' ? 'coin' : 'move');
-  }
-
   pauseItems() {
     const g = this.game;
+    const sound = (key, label) => ({ label, vol: key, action: () => toggleSound(g, key), adjust: (d) => stepVolume(g, key, d) });
+    const fs = typeof document !== 'undefined' && !!document.fullscreenElement;
     return [
       { label: 'REPRENDRE', action: () => { this.state = 'play'; g.music.muffle(false); } },
       { label: 'RECOMMENCER', action: () => { g.music.muffle(false); this.restart(); } },
-      { label: `MUSIQUE : ${Math.round(g.settings.musicVol * 100)}%`, action: () => this.adjustVol('musicVol', 0.1, true), adjust: (d) => this.adjustVol('musicVol', d * 0.1) },
-      { label: `EFFETS SONORES : ${Math.round(g.settings.sfxVol * 100)}%`, action: () => this.adjustVol('sfxVol', 0.1, true), adjust: (d) => this.adjustVol('sfxVol', d * 0.1) },
+      sound('musicVol', 'MUSIQUE'),
+      sound('sfxVol', 'EFFETS SONORES'),
       { label: `EFFETS VISUELS REDUITS : ${g.settings.reduceFx ? 'OUI' : 'NON'}`, action: () => { g.settings.reduceFx = !g.settings.reduceFx; g.persist(); } },
-      { label: 'PLEIN ECRAN', action: () => g.toggleFullscreen() },
+      { label: `PLEIN ECRAN : ${fs ? 'OUI' : 'NON'}`, action: () => g.toggleFullscreen() },
       { label: this.mode ? this.mode.exitLabel || 'MODES BONUS' : 'CARTE DES MONDES', action: () => this.exitLevel() },
       { label: 'ECRAN TITRE', action: () => { g.music.muffle(false); g.gotoTitle(); } },
     ];

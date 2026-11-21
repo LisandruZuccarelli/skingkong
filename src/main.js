@@ -1,5 +1,6 @@
 import { Game } from './game/game.js';
 import { needsFirstRun, startFirstRun } from './modes/firstrun.js';
+import { MIX } from './engine/music.js';
 
 const canvas = document.getElementById('game');
 const game = new Game(canvas);
@@ -39,14 +40,25 @@ if (params.has('probe')) {
   }
   // ?first=<tuile> : premier essai forcé, Kong placé à cette tuile (captures)
   if (params.has('first')) { startFirstRun(game); game.fade = 0; game.scene.player.x = +params.get('first') * 16; }
-  // ?ecoute=w1 : écoute d'un morceau (clic pour démarrer, ←/→ pour l'intensité)
+  // ?ecoute=w1 : écoute des morceaux (clic pour démarrer, ↑/↓ change de morceau, ←/→ intensité des synthés, N : dosage niveau / carte)
   if (params.has('ecoute')) {
-    const id = params.get('ecoute');
-    let lvl = 0.3;
+    const LIST = ['title', 'w1', 'w2', 'w3', 'w4', 'boss1', 'boss2', 'boss3', 'boss4', 'boss'];
+    const NAMES = { title: 'ACCUEIL', w1: 'MONDE 1', w2: 'MONDE 2', w3: 'MONDE 3', w4: 'MONDE 4', boss1: 'BOSS 1', boss2: 'BOSS 2', boss3: 'BOSS 3', boss4: 'BOSS 4', boss: 'ANCIEN BOSS (SYNTHE)' };
+    let id = params.get('ecoute');
+    let lvl = 0.3, inLevel = false, started = false;
+    window.game = game; // outils de mesure
     game.scene = {
       update() {
         const inp = game.input;
-        if (inp.pressed.jump || inp.pressed.confirm || inp.taps.length) game.music.play(id);
+        const mix = inLevel ? MIX.level : MIX.map;
+        // téléphone : 1er toucher = lecture, toucher suivant = morceau suivant
+        const tapNext = started && inp.taps.length;
+        if (inp.pressed.jump || inp.pressed.confirm || (inp.taps.length && !started)) { started = true; game.music.play(id, mix); }
+        const d = inp.pressed.down || tapNext ? 1 : inp.pressed.up ? -1 : 0;
+        if (d) { const i = LIST.indexOf(id); id = LIST[(i + d + LIST.length) % LIST.length]; if (started) game.music.play(id, mix); }
+        const n = inp.keys.has('KeyN');
+        if (n && !this.n) { inLevel = !inLevel; if (started) game.music.play(id, inLevel ? MIX.level : MIX.map); }
+        this.n = n;
         if (inp.pressed.right) lvl = Math.min(1, lvl + 0.1);
         if (inp.pressed.left) lvl = Math.max(0, lvl - 0.1);
         game.music.setIntensity(lvl);
@@ -54,9 +66,11 @@ if (params.has('probe')) {
       render(ctx) {
         const v = game.view;
         ctx.fillStyle = '#0e1650'; ctx.fillRect(0, 0, v.w, v.h);
-        game.text(ctx, 'ECOUTE : ' + id.toUpperCase(), v.w / 2, 90, { align: 'center', scale: 2, color: '#ffc83d' });
-        game.text(ctx, game.music.current ? 'EN COURS' : 'CLIQUE OU ESPACE POUR LANCER', v.w / 2, 120, { align: 'center' });
-        game.text(ctx, `INTENSITE ${Math.round(lvl * 100)}%  (← / →)`, v.w / 2, 140, { align: 'center', color: '#7ee8ff' });
+        game.text(ctx, 'ECOUTE : ' + (NAMES[id] || id.toUpperCase()), v.w / 2, 80, { align: 'center', scale: 2, color: '#ffc83d' });
+        game.text(ctx, game.music.current ? 'EN COURS' : 'CLIQUE OU ESPACE POUR LANCER', v.w / 2, 110, { align: 'center' });
+        game.text(ctx, `DOSAGE : ${inLevel ? 'NIVEAU 20%' : 'CARTE 50%'}  (N)`, v.w / 2, 130, { align: 'center', color: '#7ee8ff' });
+        game.text(ctx, '↑ / ↓ (OU TOUCHER) : MORCEAU SUIVANT', v.w / 2, 145, { align: 'center', color: '#9fb2ea' });
+        if (id === 'boss') game.text(ctx, `INTENSITE ${Math.round(lvl * 100)}%  (← / →)`, v.w / 2, 160, { align: 'center', color: '#9fb2ea' });
       },
     };
     game.fade = 0;

@@ -29,6 +29,7 @@ export class AudioEngine {
     for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
     this.applyVolumes();
     this.initSlideLoop();
+    if (this.onUnlock) this.onUnlock();
   }
 
   setVolume(kind, v) { this.volumes[kind] = v; this.applyVolumes(); }
